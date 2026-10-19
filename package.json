@@ -1,0 +1,12 @@
+{
+  "name": "painel-floripa",
+  "version": "0.1.0",
+  "description": "Painel de notícias de Florianópolis por bairro",
+  "private": true,
+  "type": "commonjs",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node src/coletar.js",
+    "serve": "node src/servidor.js"
+  }
+}
