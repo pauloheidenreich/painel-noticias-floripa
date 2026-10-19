@@ -17,7 +17,7 @@ exports.gerarHtml = ({ grupos, relatorio, geradoEm, total }) => {
   const fontes = relatorio.map((r) => `<li class="${r.status}">${h(r.fonte)}: ${r.status === 'ok' ? `${r.floripa} de Florianópolis (de ${r.itens})` : 'falhou – ' + h(r.erro)}</li>`).join('');
   return `<!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Painel de Notícias – Florianópolis por bairro</title>
+<title>Notícias políticas de Florianópolis por bairro</title>
 <style>
 :root{--azul:#0b4f8a;--mar:#11a0c9;--areia:#f6f1e7;--txt:#1d2733;--sub:#5d6b7a}
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--areia);color:var(--txt)}
@@ -40,12 +40,12 @@ li a{color:var(--txt);text-decoration:none;font-weight:600}li a:hover{color:var(
 footer{font-size:.85rem;color:var(--sub);padding:10px 0 30px}footer .falhou{color:#b3261e}
 @media(max-width:400px){main{grid-template-columns:1fr}}
 </style></head><body>
-<header><div class="wrap"><h1>🏝️ Notícias de Florianópolis por bairro</h1>
-<p>${total} notícias reais coletadas automaticamente · atualizado em ${fmt(geradoEm.toISOString())} (horário de Brasília)</p></div></header>
+<header><div class="wrap"><h1>🏛️ Notícias políticas de Florianópolis por bairro</h1>
+<p>${total} notícias políticas reais (poder público, Câmara, Prefeitura, governo, serviços públicos e eleições) coletadas automaticamente · atualizado em ${fmt(geradoEm.toISOString())} (horário de Brasília)</p></div></header>
 <div class="ferr"><div class="wrap"><input id="q" placeholder="Filtrar por bairro ou palavra…" aria-label="Filtrar"><nav class="chips">${chips}</nav></div></div>
 <div class="wrap"><main>${secoes}</main>
 <footer><h3>Fontes desta coleta</h3><ul>${fontes}</ul>
-<p>Classificação automática por menção ao nome do bairro no título/resumo; pode haver erros. Notícias sem bairro identificado ficam em “Geral/Cidade”.</p></footer></div>
+<p>Classificação automática por menção ao nome do bairro no título/resumo; pode haver erros. Só entram matérias de relevância política (filtro automático por palavras-chave; fontes oficiais entram sempre). Notícias sem bairro identificado ficam em “Geral/Cidade”.</p></footer></div>
 <script>
 document.getElementById('q').addEventListener('input',e=>{const q=e.target.value.toLowerCase().trim();
 document.querySelectorAll('.bairro').forEach(s=>{let vis=0;const nomeOk=s.dataset.nome.includes(q);

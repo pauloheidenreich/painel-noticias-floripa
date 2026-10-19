@@ -4,6 +4,7 @@ const path = require('path');
 const FONTES = require('./fontes');
 const BAIRROS = require('./bairros');
 const { gerarHtml } = require('./html');
+const { avaliar } = require('./politica');
 
 const RAIZ = path.join(__dirname, '..');
 const UA = 'Mozilla/5.0 (painel-floripa prototipo)';
@@ -76,6 +77,7 @@ function classificar(it, fonte) {
 async function main() {
   const relatorio = [];
   const todas = new Map();
+  const rejeitadas = []; let totalFloripa = 0;
   const limite = Date.now() - DIAS_MAX * 864e5;
   for (const f of FONTES) {
     try {
@@ -87,14 +89,18 @@ async function main() {
         if (!isNaN(d) && d.getTime() < limite) continue;
         const c = classificar(it, f);
         if (!c.ehFloripa) continue;
+        // Google News: o resumo traz manchetes de outras matérias, então avalia só o título
+        // Google News: título termina com " - Veículo"
+        const titulo = it.origem ? it.titulo.replace(new RegExp('\\s+-\\s+' + esc(it.origem) + '$'), '') : it.titulo;
+        const pol = avaliar(titulo, f.url.includes('news.google.com') ? '' : it.resumo + ' . ' + it.categorias.join(' . '), f);
+        if (!pol.aceito) { rejeitadas.push({ titulo, fonte: f.nome, pontos: pol.pontos, motivo: pol.motivo }); totalFloripa++; continue; }
+        totalFloripa++;
         let fonteNome = f.nome;
         if (f.agregador && it.origem) fonteNome = it.origem + ' (via Google News)';
         else if (f.oficial) fonteNome = f.nome + ' (via Google News)';
-        // Google News: título termina com " - Veículo"
-        const titulo = it.origem ? it.titulo.replace(new RegExp('\\s+-\\s+' + esc(it.origem) + '$'), '') : it.titulo;
         const chave = titulo.toLowerCase().replace(/\W+/g, '');
         if (todas.has(chave)) continue;
-        todas.set(chave, { titulo, link: it.link, fonte: fonteNome, data: isNaN(d) ? null : d.toISOString(), bairros: c.bairros });
+        todas.set(chave, { titulo, link: it.link, fonte: fonteNome, data: isNaN(d) ? null : d.toISOString(), bairros: c.bairros, pontos: pol.pontos, motivo: pol.motivo });
         ok++;
       }
       relatorio.push({ fonte: f.nome, url: f.url, status: 'ok', itens: itens.length, floripa: ok });
@@ -108,9 +114,9 @@ async function main() {
   const grupos = {};
   for (const n of noticias) for (const b of n.bairros.length ? n.bairros : ['Geral/Cidade']) (grupos[b] ||= []).push(n);
   const geradoEm = new Date();
-  fs.writeFileSync(path.join(RAIZ, 'noticias.json'), JSON.stringify({ geradoEm, relatorio, noticias }, null, 2));
+  fs.writeFileSync(path.join(RAIZ, 'noticias.json'), JSON.stringify({ geradoEm, relatorio, totalFloripa, noticias, rejeitadas }, null, 2));
   fs.writeFileSync(path.join(RAIZ, 'index.html'), gerarHtml({ grupos, relatorio, geradoEm, total: noticias.length, bairros: BAIRROS.map((b) => b.nome) }));
-  console.log(`\n${noticias.length} notícias de Florianópolis. Por bairro:`);
+  console.log(`\n${totalFloripa} itens de Florianópolis (antes da dedup.), ${rejeitadas.length} rejeitados pelo filtro político; ${noticias.length} notícias políticas. Por bairro:`);
   for (const [b, l] of Object.entries(grupos).sort((a, b) => b[1].length - a[1].length)) console.log(`  ${b}: ${l.length}`);
   console.log('\nGerado: ' + path.join(RAIZ, 'index.html'));
 }
