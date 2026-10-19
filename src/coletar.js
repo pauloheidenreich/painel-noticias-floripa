@@ -5,6 +5,7 @@ const FONTES = require('./fontes');
 const BAIRROS = require('./bairros');
 const { gerarHtml } = require('./html');
 const { avaliar } = require('./politica');
+const { carregarAnterior, comparar } = require('./novidades');
 
 const RAIZ = path.join(__dirname, '..');
 const UA = 'Mozilla/5.0 (painel-floripa prototipo)';
@@ -75,6 +76,7 @@ function classificar(it, fonte) {
 }
 
 async function main() {
+  const anterior = await carregarAnterior();
   const relatorio = [];
   const todas = new Map();
   const rejeitadas = []; let totalFloripa = 0;
@@ -114,10 +116,17 @@ async function main() {
   const grupos = {};
   for (const n of noticias) for (const b of n.bairros.length ? n.bairros : ['Geral/Cidade']) (grupos[b] ||= []).push(n);
   const geradoEm = new Date();
-  fs.writeFileSync(path.join(RAIZ, 'noticias.json'), JSON.stringify({ geradoEm, relatorio, totalFloripa, noticias, rejeitadas }, null, 2));
-  fs.writeFileSync(path.join(RAIZ, 'index.html'), gerarHtml({ grupos, relatorio, geradoEm, total: noticias.length, bairros: BAIRROS.map((b) => b.nome) }));
+  const novidades = comparar(anterior, noticias, geradoEm);
+  const chavesNovas = new Set(novidades.novas.map((n) => n.link));
+  for (const n of noticias) n.nova = chavesNovas.has(n.link);
+  fs.writeFileSync(path.join(RAIZ, 'novidades.json'), JSON.stringify(novidades, null, 2));
+  // histórico simples: acrescenta um resumo por execução (mantém as últimas 200), herdado do publicado
+  const historico = ((anterior && anterior.historico) || []).concat([{ atualizado_em: novidades.atualizado_em, total_noticias: novidades.total_noticias, total_novas: novidades.total_novas, removidas_count: novidades.removidas_count }]).slice(-200);
+  fs.writeFileSync(path.join(RAIZ, 'noticias.json'), JSON.stringify({ geradoEm, relatorio, totalFloripa, noticias, rejeitadas, historico }, null, 2));
+  fs.writeFileSync(path.join(RAIZ, 'index.html'), gerarHtml({ novidades, grupos, relatorio, geradoEm, total: noticias.length, bairros: BAIRROS.map((b) => b.nome) }));
   console.log(`\n${totalFloripa} itens de Florianópolis (antes da dedup.), ${rejeitadas.length} rejeitados pelo filtro político; ${noticias.length} notícias políticas. Por bairro:`);
   for (const [b, l] of Object.entries(grupos).sort((a, b) => b[1].length - a[1].length)) console.log(`  ${b}: ${l.length}`);
-  console.log('\nGerado: ' + path.join(RAIZ, 'index.html'));
+  console.log(`\nNovidades: ${novidades.total_novas} novas, ${novidades.removidas_count} removidas` + (novidades.primeira_execucao ? ' (primeira execução)' : ` desde ${novidades.atualizacao_anterior}`));
+  console.log('\nGerado: ' + path.join(RAIZ, 'index.html') + ' e novidades.json');
 }
 main().catch((e) => { console.error(e); process.exit(1); });
