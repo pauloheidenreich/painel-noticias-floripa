@@ -39,3 +39,10 @@ No Agendador de Tarefas do Windows, crie uma tarefa que execute a cada hora:
 ## Qualidade e enriquecimento (versão online)
 - `src/qualidade.js`: descarta páginas que não são notícia (Moovit e sites de linhas/horários, portais de concursos, guias, listagens, previsão do tempo, vídeos de telejornal, páginas institucionais) e itens cujo título cita outra cidade da Grande Florianópolis sem citar Florianópolis. Os descartes ficam em `noticias.json` → `descartadas`.
 - `src/ementas.js`: para atos da Câmara que trazem só o número (ex.: "LEI Nº 9299/2013"), resolve o link original do Google News, tenta ler a página da Câmara (que exige captcha; não é contornado) e procura a ementa em notícias pelo número. Quando acha, grava `resumo`; senão, `sem_ementa: true`.
+
+## Lide, datas, bairro e tema
+- `src/lide.js`: busca o lide da matéria original (og:description, meta description ou 1º parágrafo; até ~400 caracteres), com 8 conexões simultâneas, timeout de 8 s e orçamento total de 100 s (`LIDE_ORCAMENTO_MS`). Sites com captcha/403/429 ficam sem lide (não há contorno). Lides de links já vistos são reaproveitados do `noticias.json` publicado.
+- `data` = publicação; `entrou_em` = primeira vez no painel (herdado da publicação anterior).
+- `src/locais.js`: ruas, rodovias, terminais e equipamentos mapeados para bairro ou região (Norte da Ilha, Sul da Ilha, Leste da Ilha, Continente).
+- `src/temas.js`: etiquetas de tema; o HTML tem filtro por tema.
+- `novidades.json`: `novas` (todas), `novas_recentes` (publicadas há menos de 24 h) e `novas_antigas`.
