@@ -45,7 +45,7 @@ function comparar(anterior, noticias, agora) {
     primeira_execucao: !anterior,
     total_noticias: noticias.length,
     total_novas: novas.length,
-    novas: novas.map((n) => ({ titulo: n.titulo, link: n.link, fonte: n.fonte, data: n.data ? isoBrasilia(new Date(n.data)) : null, bairros: n.bairros.length ? n.bairros : ['Geral/Cidade'], pontuacao: n.pontos })),
+    novas: novas.map((n) => ({ titulo: n.titulo, link: n.link, fonte: n.fonte, data: n.data ? isoBrasilia(new Date(n.data)) : null, bairros: n.bairros.length ? n.bairros : ['Geral/Cidade'], pontuacao: n.pontos, ...(n.resumo ? { resumo: n.resumo } : {}), ...(n.sem_ementa ? { sem_ementa: true } : {}) })),
     removidas_count: removidas,
   };
 }

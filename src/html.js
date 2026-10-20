@@ -10,8 +10,9 @@ exports.gerarHtml = ({ novidades, grupos, relatorio, geradoEm, total }) => {
   <section id="${slug(b)}" class="bairro" data-nome="${h(b.toLowerCase())}">
     <h2>${h(b)} <span>${grupos[b].length}</span></h2>
     <ul>${grupos[b].map((n) => `
-      <li><a href="${h(n.link)}" target="_blank" rel="noopener">${h(n.titulo)}</a>
-        <div class="meta"><span class="fonte">${h(n.fonte)}</span> · <time>${fmt(n.data)}</time>${n.bairros.length > 1 ? ` · <span class="outros">também: ${h(n.bairros.filter((x) => x !== b).join(', '))}</span>` : ''}</div></li>`).join('')}
+      <li><a href="${h(n.link_original || n.link)}" target="_blank" rel="noopener">${h(n.titulo)}</a>
+        ${n.resumo ? `<div class="resumo">${h(n.resumo)}</div>` : n.sem_ementa ? '<div class="resumo sem">Ato da Câmara sem ementa disponível publicamente (site exige verificação).</div>' : ''}
+        <div class="meta"><span class="fonte">${h(n.fonte)}</span> · <time>${fmt(n.data)}</time>${n.ano_do_ato ? ` · ato de ${n.ano_do_ato}` : ''}${n.bairros.length > 1 ? ` · <span class="outros">também: ${h(n.bairros.filter((x) => x !== b).join(', '))}</span>` : ''}</div></li>`).join('')}
     </ul>
   </section>`).join('');
   const nv = novidades || { novas: [] };
@@ -44,6 +45,7 @@ main{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:
 .bairro h2 span{background:var(--mar);color:#fff;border-radius:999px;padding:0 10px;font-size:.85rem;line-height:1.7}
 ul{list-style:none;margin:0;padding:0}li{padding:9px 0;border-top:1px solid #eee}li:first-child{border-top:0}
 li a{color:var(--txt);text-decoration:none;font-weight:600}li a:hover{color:var(--mar);text-decoration:underline}
+.resumo{font-size:.88rem;margin-top:3px;color:#33414f}.resumo.sem{font-style:italic;color:#8a96a3}
 .meta{font-size:.8rem;color:var(--sub);margin-top:3px}.fonte{color:var(--azul)}
 #geral-cidade,#novas{grid-column:1/-1}.novas{border:2px solid var(--mar)}
 footer{font-size:.85rem;color:var(--sub);padding:10px 0 30px}footer .falhou{color:#b3261e}

@@ -6,6 +6,8 @@ const BAIRROS = require('./bairros');
 const { gerarHtml } = require('./html');
 const { avaliar } = require('./politica');
 const { carregarAnterior, comparar } = require('./novidades');
+const { motivoDescarte } = require('./qualidade');
+const { enriquecer } = require('./ementas');
 
 const RAIZ = path.join(__dirname, '..');
 const UA = 'Mozilla/5.0 (painel-floripa prototipo)';
@@ -79,7 +81,7 @@ async function main() {
   const anterior = await carregarAnterior();
   const relatorio = [];
   const todas = new Map();
-  const rejeitadas = []; let totalFloripa = 0;
+  const rejeitadas = []; const descartadas = []; let totalFloripa = 0;
   const limite = Date.now() - DIAS_MAX * 864e5;
   for (const f of FONTES) {
     try {
@@ -94,12 +96,14 @@ async function main() {
         // Google News: o resumo traz manchetes de outras matérias, então avalia só o título
         // Google News: título termina com " - Veículo"
         const titulo = it.origem ? it.titulo.replace(new RegExp('\\s+-\\s+' + esc(it.origem) + '$'), '') : it.titulo;
-        const pol = avaliar(titulo, f.url.includes('news.google.com') ? '' : it.resumo + ' . ' + it.categorias.join(' . '), f);
-        if (!pol.aceito) { rejeitadas.push({ titulo, fonte: f.nome, pontos: pol.pontos, motivo: pol.motivo }); totalFloripa++; continue; }
-        totalFloripa++;
         let fonteNome = f.nome;
         if (f.agregador && it.origem) fonteNome = it.origem + ' (via Google News)';
         else if (f.oficial) fonteNome = f.nome + ' (via Google News)';
+        const desc = motivoDescarte({ titulo, fonte: fonteNome + ' ' + (it.origem || ''), link: it.link }, f);
+        if (desc) { descartadas.push({ titulo, fonte: fonteNome, motivo: desc }); continue; }
+        const pol = avaliar(titulo, f.url.includes('news.google.com') ? '' : it.resumo + ' . ' + it.categorias.join(' . '), f);
+        if (!pol.aceito) { rejeitadas.push({ titulo, fonte: f.nome, pontos: pol.pontos, motivo: pol.motivo }); totalFloripa++; continue; }
+        totalFloripa++;
         const chave = titulo.toLowerCase().replace(/\W+/g, '');
         if (todas.has(chave)) continue;
         todas.set(chave, { titulo, link: it.link, fonte: fonteNome, data: isNaN(d) ? null : d.toISOString(), bairros: c.bairros, pontos: pol.pontos, motivo: pol.motivo });
@@ -113,6 +117,10 @@ async function main() {
     }
   }
   const noticias = [...todas.values()].sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+  if (!noticias.length) { console.error('Nenhuma notícia coletada: mantendo arquivos anteriores.'); process.exit(1); }
+  const ementas = await enriquecer(noticias);
+  console.log(`Atos só com número: ${ementas.candidatos} · link original resolvido: ${ementas.link_resolvido} · com resumo: ${ementas.com_resumo} · sem ementa: ${ementas.sem_ementa} (captcha no site da Câmara: ${ementas.captcha})`);
+  console.log(`Descartados por qualidade: ${descartadas.length}`);
   const grupos = {};
   for (const n of noticias) for (const b of n.bairros.length ? n.bairros : ['Geral/Cidade']) (grupos[b] ||= []).push(n);
   const geradoEm = new Date();
@@ -122,7 +130,7 @@ async function main() {
   fs.writeFileSync(path.join(RAIZ, 'novidades.json'), JSON.stringify(novidades, null, 2));
   // histórico simples: acrescenta um resumo por execução (mantém as últimas 200), herdado do publicado
   const historico = ((anterior && anterior.historico) || []).concat([{ atualizado_em: novidades.atualizado_em, total_noticias: novidades.total_noticias, total_novas: novidades.total_novas, removidas_count: novidades.removidas_count }]).slice(-200);
-  fs.writeFileSync(path.join(RAIZ, 'noticias.json'), JSON.stringify({ geradoEm, relatorio, totalFloripa, noticias, rejeitadas, historico }, null, 2));
+  fs.writeFileSync(path.join(RAIZ, 'noticias.json'), JSON.stringify({ geradoEm, relatorio, totalFloripa, ementas, noticias, rejeitadas, descartadas, historico }, null, 2));
   fs.writeFileSync(path.join(RAIZ, 'index.html'), gerarHtml({ novidades, grupos, relatorio, geradoEm, total: noticias.length, bairros: BAIRROS.map((b) => b.nome) }));
   console.log(`\n${totalFloripa} itens de Florianópolis (antes da dedup.), ${rejeitadas.length} rejeitados pelo filtro político; ${noticias.length} notícias políticas. Por bairro:`);
   for (const [b, l] of Object.entries(grupos).sort((a, b) => b[1].length - a[1].length)) console.log(`  ${b}: ${l.length}`);

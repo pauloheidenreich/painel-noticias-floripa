@@ -35,3 +35,7 @@ No Agendador de Tarefas do Windows, crie uma tarefa que execute a cada hora:
 - Sites da Prefeitura (pmf.sc.gov.br) e da Câmara (cmf.sc.gov.br) não respondem a robôs (timeout / captcha); suas notícias vêm via Google News filtrado pelo domínio oficial, que pode estar desatualizado.
 - Itens do Google News trazem só o título e link de redirecionamento do Google.
 - Só notícias dos últimos 30 dias.
+
+## Qualidade e enriquecimento (versão online)
+- `src/qualidade.js`: descarta páginas que não são notícia (Moovit e sites de linhas/horários, portais de concursos, guias, listagens, previsão do tempo, vídeos de telejornal, páginas institucionais) e itens cujo título cita outra cidade da Grande Florianópolis sem citar Florianópolis. Os descartes ficam em `noticias.json` → `descartadas`.
+- `src/ementas.js`: para atos da Câmara que trazem só o número (ex.: "LEI Nº 9299/2013"), resolve o link original do Google News, tenta ler a página da Câmara (que exige captcha; não é contornado) e procura a ementa em notícias pelo número. Quando acha, grava `resumo`; senão, `sem_ementa: true`.
