@@ -22,7 +22,30 @@ const INSTITUCIONAL = /^(regimento interno|lei org[aâ]nica|secretaria municipal
 const OUTRAS_CIDADES = /\b(Palho[cç]a|S[aã]o Jos[eé]|Bigua[cç]u|Santo Amaro da Imperatriz|Governador Celso Ramos|Ant[oô]nio Carlos|[AÁ]guas Mornas|S[aã]o Pedro de Alc[aâ]ntara|Angelina|Rancho Queimado|Anit[aá]polis|S[aã]o Bonif[aá]cio|Alfredo Wagner|Paulo Lopes|Garopaba|Tijucas|Canelinha|Major Gercino|Nova Trento|Leoberto Leal)\b/;
 const FLORIPA_TITULO = /Florian[oó]polis|Floripa|\bCapital\b/;
 
+// Atos legislativos antigos (reindexados pelo Google News): título/link com tipo de ato + número/ano.
+const RE_ATO = /\b(?:lei(?: complementar| ordin[aá]ria)?(?: cmf)?|projeto de lei(?: complementar)?|pl[co]?|resolu[cç][aã]o|decreto(?: legislativo)?|emenda(?: [aà] lei org[aâ]nica)?|indica[cç][aã]o|requerimento|mo[cç][aã]o|portaria)\s+n?[º°o.]*\s*[\d.]+\s*(?:\/\s*(\d{4})|,?\s*de\s+\d{1,2}\s+de\s+[a-zç]+\s+de\s+(\d{4}))/i;
+const RE_ATO_LINK = /\b(?:lei|lei-complementar|projeto-de-lei|resolucao|decreto|decreto-legislativo|emenda)[-_](?:n[-_])?\d+[-_\/](\d{4})\b/i;
+const anoAtual = () => Number(new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }).slice(0, 4));
+function anoAtoAntigo(titulo, link) {
+  const m = String(titulo || '').match(RE_ATO) || String(link || '').match(RE_ATO_LINK);
+  if (!m) return null;
+  const ano = Number(m[1] || m[2]);
+  return ano && ano < anoAtual() - 1 ? ano : null;
+}
+// Notícia cujo título não cita Florianópolis e cujo texto fala só de outra cidade (ex.: Aqueduto de São Miguel, em Biguaçu).
+function outraCidadeNoTexto(n) {
+  const tit = String(n.titulo || '').replace(/Grande Florian[oó]polis/gi, '');
+  if (FLORIPA_TITULO.test(tit)) return null;
+  const texto = [n.lide, n.resumo].filter(Boolean).join(' . ');
+  const outra = texto.match(OUTRAS_CIDADES) || (/Aqueduto de S[aã]o Miguel/i.test(texto + ' ' + n.titulo) ? [0, 'Biguaçu'] : null);
+  if (!outra) return null;
+  if (/Florian[oó]polis|Floripa/i.test(texto.replace(/Grande Florian[oó]polis/gi, ''))) return null;
+  return 'outra cidade (no texto): ' + outra[1];
+}
+
 function motivoDescarte(item, fonte) {
+  const antigo = anoAtoAntigo(item.titulo, item.link);
+  if (antigo) return 'ato legislativo antigo: ' + antigo;
   const fonteTxt = norm(item.fonte + ' ' + (item.link || ''));
   const b = FONTES_BLOQUEADAS.find((f) => fonteTxt.includes(norm(f)));
   if (b) return 'fonte bloqueada: ' + b;
@@ -35,4 +58,4 @@ function motivoDescarte(item, fonte) {
   if (outra && !FLORIPA_TITULO.test(semGrande)) return 'outra cidade: ' + outra[1];
   return null;
 }
-module.exports = { motivoDescarte, OUTRAS_CIDADES };
+module.exports = { motivoDescarte, anoAtoAntigo, outraCidadeNoTexto, OUTRAS_CIDADES };

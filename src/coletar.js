@@ -6,7 +6,7 @@ const BAIRROS = require('./bairros');
 const { gerarHtml } = require('./html');
 const { avaliar } = require('./politica');
 const { carregarAnterior, comparar } = require('./novidades');
-const { motivoDescarte } = require('./qualidade');
+const { motivoDescarte, anoAtoAntigo, outraCidadeNoTexto } = require('./qualidade');
 const { enriquecer } = require('./ementas');
 const { preencherLides } = require('./lide');
 const { temas: temasDe } = require('./temas');
@@ -152,6 +152,14 @@ async function main() {
   const lides = await preencherLides(noticias, cache, { concorrencia: 8, timeoutMs: 8000, orcamentoMs: Number(process.env.LIDE_ORCAMENTO_MS) || 100000 }, normLink);
   console.log(`Lides: ${noticias.length - lides.sem}/${noticias.length} (cache ${lides.cache}, página ${lides.ok}, feed ${lides.feed}; bloqueados ${lides.bloqueados}, erros ${lides.erros}, sem tempo ${lides.sem_tempo}) em ${((Date.now() - t0) / 1000).toFixed(1)}s`);
   const agoraIso = isoBrasilia(new Date());
+  // descarte pós-enriquecimento: ato antigo (ano só no link original/ementa) e notícia só de outra cidade (pelo lide)
+  for (let i = noticias.length - 1; i >= 0; i--) {
+    const n = noticias[i]; const oficial = /^(Prefeitura|Câmara Municipal) de Florianópolis/.test(n.fonte);
+    const ano = anoAtoAntigo(n.titulo, n.link_original) || (n.ano_do_ato && n.ano_do_ato < Number(new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }).slice(0, 4)) - 1 ? n.ano_do_ato : null);
+    const m = ano ? 'ato legislativo antigo: ' + ano : oficial ? null : outraCidadeNoTexto(n);
+    if (m) { descartadas.push({ titulo: n.titulo, fonte: n.fonte, motivo: m }); noticias.splice(i, 1); }
+  }
+  console.log(`Descartados após lide: ${descartadas.length} no total por qualidade`);
   const geralAntes = noticias.filter((n) => !n.bairros.length).length;
   for (const n of noticias) {
     const texto = [n.titulo, n.resumo_feed, n.lide, n.resumo].filter(Boolean).join(' . ');
