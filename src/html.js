@@ -35,7 +35,7 @@ aside{position:sticky;top:64px;height:calc(100vh - 64px);flex:0 0 260px;width:26
 .item.zero{color:#a3abb7}.item.zero .c{background:#e5e7eb!important;color:#a3abb7}
 .cidade{margin:2px 0 6px;font-weight:600}.item.reg{font-style:italic}
 details{margin-top:4px}summary{list-style:none;cursor:pointer;padding:7px 10px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;gap:8px}
-summary::-webkit-details-marker{display:none}summary::before{content:"▸";color:#94a3b8;transition:.15s}details[open] summary::before{transform:rotate(90deg)}
+summary::-webkit-details-marker{display:none}summary{min-height:36px;border-radius:8px}summary:hover{background:#f1f5f9}summary::before{content:"▸";color:#64748b;font-size:17px;line-height:1;width:22px;height:22px;display:inline-grid;place-items:center;margin-left:-4px;transition:.15s}details[open] summary::before{transform:rotate(90deg)}
 summary i{width:9px;height:9px;border-radius:50%}summary span{margin-left:auto;color:#94a3b8;font-weight:500}
 details .item{padding-left:26px}
 .temas{border-top:1px solid #eef0f3;padding:10px 12px 14px}.temas h4{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#64748b}
@@ -99,15 +99,15 @@ const regiaoDe=n=>{for(const b of n.bairros)if(regDe[b])return regDe[b];return n
 const cor=r=>'var(--'+(r||'Cidade')+')';
 const novo=n=>n.data&&AGORA-new Date(n.data)<DIA;
 const $=id=>document.getElementById(id);
-let cont={},sel=null,tema=null,pag=0,q='';
+const abertos=new Set();let cont={},sel=null,tema=null,pag=0,q='';
 function contar(){AGORA=Date.now();cont={};D.noticias.filter(novo).forEach(n=>{const rs=new Set();n.bairros.forEach(b=>{cont[b]=(cont[b]||0)+1;if(regDe[b])rs.add(regDe[b])});rs.forEach(r=>cont['@'+r]=(cont['@'+r]||0)+1)})}
 const fmt=s=>s?new Date(s).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(',',' ·'):'sem data';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm=s=>s.normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase();
 const it=(id,nome,n,r,cls='')=>'<div class="item '+cls+(n?'':' zero')+(sel===id?' ativo':'')+'" data-b="'+esc(id)+'"><span>'+esc(nome)+'</span><span class="c" style="background:'+cor(r)+'">'+n+'</span></div>';
 function lista(){const f=b=>!q||norm(b).includes(q);let h='<div class="item cidade'+(sel?'':' ativo')+'" data-b=""><span>Toda a cidade</span><span class="c" style="background:'+cor()+'">'+D.noticias.filter(novo).length+'</span></div>';
-for(const[r,bs]of Object.entries(D.regioes)){const v=bs.filter(f);if(!v.length&&!f(r))continue;const tot=cont['@'+r]||0;const aberto=q||tot||r==='Centro'||(sel&&(sel==='@'+r||regDe[sel]===r));
-h+='<details'+(aberto?' open':'')+'><summary><i style="background:'+cor(r)+'"></i>'+r+'<span>'+tot+'</span></summary>'+it('@'+r,'Toda a região',tot,r,'reg')+v.map(b=>it(b,b,cont[b]||0,regDe[b])).join('')+'</details>'}
+for(const[r,bs]of Object.entries(D.regioes)){const v=bs.filter(f);if(!v.length&&!f(r))continue;const tot=cont['@'+r]||0;const aberto=q||abertos.has(r);
+h+='<details data-r="'+r+'"'+(aberto?' open':'')+'><summary><i style="background:'+cor(r)+'"></i>'+r+'<span>'+tot+'</span></summary>'+it('@'+r,'Toda a região',tot,r,'reg')+v.map(b=>it(b,b,cont[b]||0,regDe[b])).join('')+'</details>'}
 $('lista').innerHTML=h}
 function chips(){$('chips').innerHTML=D.temas.map(x=>'<button class="chip'+(tema===x?' on':'')+'" data-t="'+esc(x)+'">'+esc(x)+'</button>').join('')}
 const casa=n=>!sel||(sel[0]==='@'?n.bairros.some(b=>regDe[b]===sel.slice(1)):n.bairros.includes(sel));
@@ -118,7 +118,8 @@ $('grade').innerHTML=ns.slice(pag*6,pag*6+6).map(n=>{const r=regiaoDe(n);const b
 return '<article class="card'+(novo(n)?'':' velho')+'">'+(novo(n)?'<span class="novo">Novo</span>':'')+'<div class="meta"><span>'+esc(n.fonte.replace(/ \\(via Google News\\)$/,''))+'</span>·<span>'+fmt(n.data)+'</span><span class="tag" style="background:'+cor(r)+'">'+esc(b||'Cidade')+'</span>'+(n.temas[0]?'<span class="tema">'+esc(tema||n.temas[0])+'</span>':'')+(n.ano?'<span>ato de '+esc(n.ano)+'</span>':'')+'</div>'
 +'<h2 title="'+esc(n.titulo)+'">'+esc(n.titulo)+'</h2>'+(n.lide?'<p'+(n.sem?' class="sem"':'')+' title="'+esc(n.lide)+'">'+esc(n.lide)+'</p>':'')+'<div class="links"><a href="'+esc(n.link)+'" target="_blank" rel="noopener">Ler na fonte →</a>'+(n.gn?'<a class="gn" href="'+esc(n.gn)+'" target="_blank" rel="noopener">via Google News</a>':'')+'</div></article>'}).join('')||'<div class="vazio">Nenhuma notícia para este filtro.</div>';
 $('pg').textContent='Página '+(pag+1)+' de '+tp;$('ant').disabled=pag===0;$('prox').disabled=pag>=tp-1}
-$('lista').onclick=e=>{const i=e.target.closest('.item');if(!i)return;sel=i.dataset.b||null;pag=0;document.body.classList.remove('menu');lista();grade()};
+$('lista').addEventListener('toggle',e=>{const d=e.target;if(d.dataset&&d.dataset.r&&!q){d.open?abertos.add(d.dataset.r):abertos.delete(d.dataset.r)}},true);
+$('lista').onclick=e=>{const i=e.target.closest('.item');if(!i)return;sel=i.dataset.b||null;const dr=i.closest('details');if(dr)abertos.add(dr.dataset.r);pag=0;document.body.classList.remove('menu');lista();grade()};
 $('chips').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;tema=tema===c.dataset.t?null:c.dataset.t;pag=0;chips();grade()};
 $('q').oninput=()=>{q=norm($('q').value.trim());lista()};
 $('ant').onclick=()=>{pag--;grade();scrollTo(0,0)};$('prox').onclick=()=>{pag++;grade();scrollTo(0,0)};
