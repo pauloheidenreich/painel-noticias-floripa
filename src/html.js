@@ -60,9 +60,9 @@ main{flex:1;min-width:0;padding:28px 36px;min-height:calc(100vh - 64px);display:
 .grade{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:18px;flex:1;max-height:720px}
 .card{background:#fff;border-radius:14px;box-shadow:0 1px 3px rgba(15,23,42,.06),0 6px 18px rgba(15,23,42,.05);padding:18px;display:flex;flex-direction:column;gap:10px;min-height:0;position:relative}
 .card.velho{opacity:.6}
-.meta{font-size:12px;color:#64748b;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding-right:44px}
-.tag{color:#fff;border-radius:6px;padding:1px 7px;font-weight:600}.tema{background:#f1f5f9;border-radius:6px;padding:1px 7px;color:#475569}
-.novo{position:absolute;top:14px;right:14px;background:#16a34a;color:#fff;font-size:11px;font-weight:700;border-radius:6px;padding:2px 7px}
+.meta{font-size:12px;color:#64748b;display:flex;flex-wrap:wrap;gap:6px;align-items:center}.selos{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.selos>span{display:inline-flex;align-items:center;height:20px;line-height:20px;padding:0 8px;border-radius:6px;font-size:11px;white-space:nowrap;box-sizing:border-box}
+.tag{color:#fff;font-weight:600}.tema{background:#f1f5f9;color:#475569}.ato{background:#f8fafc;color:#64748b;border:1px solid #e2e8f0}
+.novo{background:#16a34a;color:#fff;font-weight:700}
 .card h2{margin:0;font-size:17px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
 .card p{margin:0;font-size:14px;line-height:1.45;color:#475569;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.card p.sem{font-style:italic;color:#8a96a3}
 .links{margin-top:auto;display:flex;gap:12px;font-size:13px}.links a{font-weight:600;color:#2563eb;text-decoration:none}.links a.gn{font-weight:400;color:#94a3b8}
@@ -120,7 +120,7 @@ function grade(){const ns=D.noticias.filter(n=>casa(n)&&(!tema||n.temas.includes
 const tp=Math.max(1,Math.ceil(ns.length/6));pag=Math.max(0,Math.min(pag,tp-1));
 $('titulo').textContent=!sel?'Toda a cidade':sel[0]==='@'?'Região '+sel.slice(1):sel;
 $('grade').innerHTML=ns.slice(pag*6,pag*6+6).map(n=>{const r=regiaoDe(n);const b=sel&&sel[0]!=='@'?sel:(n.bairros.find(x=>!D.rotulos[x])||n.bairros[0]);
-return '<article class="card'+(novo(n)?'':' velho')+'">'+(novo(n)?'<span class="novo">Novo</span>':'')+'<div class="meta"><span>'+esc(n.fonte.replace(/ \\(via Google News\\)$/,''))+'</span>·<span>'+fmt(n.data)+'</span><span class="tag" style="background:'+cor(r)+'">'+esc(b||'Cidade')+'</span>'+(n.temas[0]?'<span class="tema">'+esc(tema||n.temas[0])+'</span>':'')+(n.ano?'<span>ato de '+esc(n.ano)+'</span>':'')+'</div>'
+return '<article class="card'+(novo(n)?'':' velho')+'"><div class="meta"><span>'+esc(n.fonte.replace(/ \\(via Google News\\)$/,''))+'</span>·<span>'+fmt(n.data)+'</span></div><div class="selos">'+(novo(n)?'<span class="novo">Novo</span>':'')+'<span class="tag" style="background:'+cor(r)+'">'+esc(b||'Cidade')+'</span>'+(n.temas[0]?'<span class="tema">'+esc(tema||n.temas[0])+'</span>':'')+(n.ano?'<span class="ato">ato de '+esc(n.ano)+'</span>':'')+'</div>'
 +'<h2 title="'+esc(n.titulo)+'">'+esc(n.titulo)+'</h2>'+(n.lide?'<p'+(n.sem?' class="sem"':'')+' title="'+esc(n.lide)+'">'+esc(n.lide)+'</p>':'')+'<div class="links"><a href="'+esc(n.link)+'" target="_blank" rel="noopener">Ler na fonte →</a>'+(n.gn?'<a class="gn" href="'+esc(n.gn)+'" target="_blank" rel="noopener">via Google News</a>':'')+'</div></article>'}).join('')||'<div class="vazio">Nenhuma notícia para este filtro.</div>';
 $('pg').textContent='Página '+(pag+1)+' de '+tp;$('ant').disabled=pag===0;$('prox').disabled=pag>=tp-1}
 $('lista').addEventListener('toggle',e=>{const d=e.target;if(d.dataset&&d.dataset.r&&!q){d.open?abertos.add(d.dataset.r):abertos.delete(d.dataset.r)}},true);
