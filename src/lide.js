@@ -57,6 +57,7 @@ async function preencherLides(noticias, cache, { concorrencia = 8, timeoutMs = 8
   const st = { total: noticias.length, cache: 0, feed: 0, buscados: 0, ok: 0, bloqueados: 0, erros: 0, sem: 0, sem_tempo: 0 };
   const inicio = Date.now();
   await pool(noticias, concorrencia, async (n) => {
+    if (n.sem_busca_lide) return; // itens da API da Câmara: a ementa já é o resumo (o site exige captcha)
     const c = cache.get(normLink(n.link));
     if (c && c.lide) { n.lide = c.lide; if (c.link_original && !n.link_original) n.link_original = c.link_original; n.lide_origem = 'cache'; st.cache++; return; }
     if (Date.now() - inicio > orcamentoMs) { st.sem_tempo++; return; }

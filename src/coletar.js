@@ -8,6 +8,7 @@ const { avaliar } = require('./politica');
 const { carregarAnterior, comparar } = require('./novidades');
 const { motivoDescarte, anoAtoAntigo, outraCidadeNoTexto } = require('./qualidade');
 const { enriquecer } = require('./ementas');
+const { buscarCamara, chaveAto, FONTE: FONTE_CMF } = require('./camara');
 const { preencherLides } = require('./lide');
 const { temas: temasDe } = require('./temas');
 const LOCAIS = require('./locais');
@@ -98,6 +99,8 @@ function bairrosDe(texto) {
 }
 
 async function main() {
+  // dados abertos da Câmara (só com CMF_TOKEN): roda em paralelo com os feeds; nunca derruba a coleta
+  const pCamara = buscarCamara({ log: console.log }).catch((e) => ({ itens: [], st: { ativo: true, erro: 'falha inesperada' } }));
   const anterior = await carregarAnterior();
   const relatorio = [];
   const todas = new Map();
@@ -140,6 +143,36 @@ async function main() {
   if (!noticias.length) { console.error('Nenhuma notícia coletada: mantendo arquivos anteriores.'); process.exit(1); }
   const ementas = await enriquecer(noticias);
   console.log(`Atos só com número: ${ementas.candidatos} · link original resolvido: ${ementas.link_resolvido} · com resumo: ${ementas.com_resumo} · sem ementa: ${ementas.sem_ementa} (captcha no site da Câmara: ${ementas.captcha})`);
+  const cmf = await pCamara;
+  const cst = cmf.st; cst.ementas_preenchidas = 0; cst.adicionados = 0; cst.duplicados = 0; cst.descartados = 0;
+  if (cst.ativo) {
+    const porChave = new Map(cmf.itens.filter((x) => x.chave && x.ementa).map((x) => [x.chave, x]));
+    // 1) ementas para atos da Câmara vindos do Google News
+    for (const n of noticias) {
+      const k = chaveAto(n.titulo); const x = k && porChave.get(k);
+      if (!x) continue;
+      if (!n.resumo || n.sem_ementa) { n.resumo = x.ementa; cst.ementas_preenchidas++; }
+      delete n.sem_ementa; n.ementa_cmf = true;
+      if (x.autoria) n.autoria = x.autoria;
+      if (!n.link_original && x.link) n.link_original = x.link;
+    }
+    // 2) proposições/normas recentes como itens próprios (dedup por tipo+número+ano e por título)
+    const chavesExist = new Set(noticias.map((n) => chaveAto(n.titulo)).filter(Boolean));
+    const MAX_CMF = 25; // limite de itens próprios da API por coleta (mais recentes), para não abafar o noticiário
+    for (const x of cmf.itens) {
+      if (cst.adicionados >= MAX_CMF) { cst.excedentes = (cst.excedentes || 0) + 1; continue; }
+      if (x.honraria) { descartadas.push({ titulo: x.titulo, fonte: FONTE_CMF, motivo: 'honraria/homenagem' }); cst.descartados++; continue; }
+      if ((x.chave && chavesExist.has(x.chave)) || todas.has(x.titulo.toLowerCase().replace(/\W+/g, ''))) { cst.duplicados++; continue; }
+      const desc = motivoDescarte({ titulo: x.titulo, fonte: FONTE_CMF, link: x.link }, { oficial: true });
+      if (desc) { descartadas.push({ titulo: x.titulo, fonte: FONTE_CMF, motivo: desc }); cst.descartados++; continue; }
+      const pol = avaliar(x.titulo, x.ementa, { oficial: true });
+      noticias.push({ titulo: x.titulo, link: x.link, fonte: FONTE_CMF, data: x.data, bairros: [], pontos: pol.pontos, motivo: pol.motivo, resumo: x.ementa || null, ...(x.ementa ? {} : { sem_ementa: true }), autoria: x.autoria, sem_busca_lide: true });
+      if (x.chave) chavesExist.add(x.chave); cst.adicionados++;
+    }
+    noticias.sort((a, b) => (b.data || '').localeCompare(a.data || ''));
+    relatorio.push({ fonte: FONTE_CMF, url: 'https://www.cmf.sc.gov.br/jsonweb/ (API de dados abertos)', status: cst.erro && !cmf.itens.length ? 'falhou' : 'ok', itens: cmf.itens.length, floripa: cst.adicionados, ...(cst.erro ? { erro: cst.erro } : {}) });
+    console.log(`Câmara (dados abertos): ${cst.chamadas} chamadas em ${cst.tempo_s}s, ${cmf.itens.length} itens recentes, ${cst.adicionados} adicionados, ${cst.duplicados} duplicados, ${cst.descartados} descartados (honrarias/denominações/filtros), ${cst.excedentes || 0} acima do limite, ${cst.ementas_preenchidas} ementas preenchidas${cst.erro ? ' · erro: ' + cst.erro : ''}`);
+  } else console.log('Câmara (dados abertos): sem CMF_TOKEN, ignorada');
   console.log(`Descartados por qualidade: ${descartadas.length}`);
   // cache (lide/link original) e data de entrada herdados da publicação anterior
   const cache = new Map(); const entradaLink = new Map(); const entradaTit = new Map();
@@ -154,7 +187,7 @@ async function main() {
   const agoraIso = isoBrasilia(new Date());
   // descarte pós-enriquecimento: ato antigo (ano só no link original/ementa) e notícia só de outra cidade (pelo lide)
   for (let i = noticias.length - 1; i >= 0; i--) {
-    const n = noticias[i]; const oficial = /^(Prefeitura|Câmara Municipal) de Florianópolis/.test(n.fonte);
+    const n = noticias[i]; const oficial = /^(Prefeitura|Câmara Municipal) de Florianópolis/.test(n.fonte) || n.fonte === FONTE_CMF;
     const ano = anoAtoAntigo(n.titulo, n.link_original) || (n.ano_do_ato && n.ano_do_ato < Number(new Date().toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' }).slice(0, 4)) - 1 ? n.ano_do_ato : null);
     const m = ano ? 'ato legislativo antigo: ' + ano : oficial ? null : outraCidadeNoTexto(n);
     if (m) { descartadas.push({ titulo: n.titulo, fonte: n.fonte, motivo: m }); noticias.splice(i, 1); }
@@ -166,13 +199,13 @@ async function main() {
     n.bairros = bairrosDe(texto);
     n.temas = temasDe(texto);
     n.entrou_em = entradaLink.get(normLink(n.link)) || entradaTit.get(normTitulo(n.titulo)) || agoraIso;
-    delete n.resumo_feed;
+    delete n.resumo_feed; delete n.sem_busca_lide;
   }
   const geralDepois = noticias.filter((n) => !n.bairros.length).length;
   console.log(`Geral/Cidade: antes ${geralAntes}/${noticias.length} (${(100 * geralAntes / noticias.length).toFixed(0)}%), depois ${geralDepois}/${noticias.length} (${(100 * geralDepois / noticias.length).toFixed(0)}%)`);
   const contTemas = {}; for (const n of noticias) for (const t of n.temas.length ? n.temas : ['(sem tema)']) contTemas[t] = (contTemas[t] || 0) + 1;
   console.log('Temas:', JSON.stringify(contTemas));
-  const qualidade = { lides, geral_antes: geralAntes, geral_depois: geralDepois, temas: contTemas };
+  const qualidade = { camara: { ativo: cst.ativo, chamadas: cst.chamadas, itens: cmf.itens.length, adicionados: cst.adicionados, ementas_preenchidas: cst.ementas_preenchidas, erro: cst.erro || null }, lides, geral_antes: geralAntes, geral_depois: geralDepois, temas: contTemas };
   const grupos = {};
   for (const n of noticias) for (const b of n.bairros.length ? n.bairros : ['Geral/Cidade']) (grupos[b] ||= []).push(n);
   const geradoEm = new Date();
