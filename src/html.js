@@ -49,7 +49,7 @@ main{flex:1;min-width:0;padding:28px 36px;min-height:calc(100vh - 64px);display:
 .marca>div{min-width:0}.cu{display:none}
 .status{margin-left:auto;text-align:right;font-size:12px;color:#cfdbea;line-height:1.4;position:relative;white-space:nowrap}.status strong{color:#fff;font-size:13px}
 .corpo{display:flex;align-items:flex-start}
-.painel-cab{margin-bottom:20px}.cel-status{display:none;font-size:13px;color:#64748b;margin-top:4px}h1{margin:0;font-size:26px}
+.painel-cab{margin-bottom:20px}.pag #voltar{margin-right:12px}.cel-status{display:none;font-size:13px;color:#64748b;margin-top:4px}h1{margin:0;font-size:26px}
 .rodape{background:var(--marinho);color:#cfdbea;font-size:13px;line-height:1.55}
 .rodape .cols{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:32px;max-width:1200px;margin:0 auto;padding:36px 32px 24px}
 .rodape h3{margin:0 0 10px;color:#fff;font-size:13px;text-transform:uppercase;letter-spacing:.07em}.rodape p{margin:0 0 8px}.rodape ul{margin:0;padding:0;list-style:none}.rodape li{padding:2px 0}
@@ -84,7 +84,7 @@ main{padding:16px}h1{font-size:22px}
 <div class="temas"><h4>Temas</h4><div class="chips" id="chips"></div></div></aside>
 <main><div class="painel-cab"><h1 id="titulo">Toda a cidade</h1><div class="cel-status">${total} notícias · atualizado às ${h(geradoEm.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' }))} de ${h(geradoEm.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit' }))}</div></div>
 <section class="grade" id="grade" aria-live="polite"></section>
-<nav class="pag"><button id="ant">‹ Anteriores</button><span id="pg"></span><button id="prox">Próximas ›</button></nav>
+<nav class="pag"><button id="voltar" type="button" disabled aria-label="Voltar à visão anterior">← Voltar</button><button id="ant">‹ Anteriores</button><span id="pg"></span><button id="prox">Próximas ›</button></nav>
 </main></div>
 <footer class="rodape"><div class="cols">
 <section><h3>Sobre o painel</h3><p>Notícias de relevância política sobre Florianópolis — Prefeitura, Câmara Municipal, serviços e políticas públicas — coletadas automaticamente e organizadas por bairro e região.</p><p>Bairro, região e tema são atribuídos automaticamente e podem conter erros. ${nv.novas.length} notícias novas nesta atualização.</p></section>
@@ -99,7 +99,12 @@ const regiaoDe=n=>{for(const b of n.bairros)if(regDe[b])return regDe[b];return n
 const cor=r=>'var(--'+(r||'Cidade')+')';
 const novo=n=>n.data&&AGORA-new Date(n.data)<DIA;
 const $=id=>document.getElementById(id);
-const abertos=new Set();let cont={},sel=null,tema=null,pag=0,q='';
+const abertos=new Set();let cont={},sel=null,tema=null,pag=0,q='',prof=0;
+const hashDe=()=>{const p=new URLSearchParams();if(sel)sel[0]==='@'?p.set('regiao',sel.slice(1)):p.set('bairro',sel);if(tema)p.set('tema',tema);if(q)p.set('busca',$('q').value.trim());if(pag)p.set('pag',pag+1);const s=p.toString();return s?'#'+s:location.pathname+location.search};
+const lerHash=()=>{const p=new URLSearchParams(location.hash.slice(1));sel=p.get('regiao')?'@'+p.get('regiao'):p.get('bairro')||null;tema=p.get('tema')||null;const b=p.get('busca')||'';$('q').value=b;q=norm(b);pag=Math.max(0,(+p.get('pag')||1)-1)};
+const inicial=()=>!sel&&!tema&&!q&&!pag;
+function btnVoltar(){$('voltar').disabled=inicial()}
+function empurrar(){const h=hashDe();if(h===(location.hash||location.pathname+location.search))return;prof++;history.pushState({prof},'',h);btnVoltar()}
 function contar(){AGORA=Date.now();cont={};D.noticias.filter(novo).forEach(n=>{const rs=new Set();n.bairros.forEach(b=>{cont[b]=(cont[b]||0)+1;if(regDe[b])rs.add(regDe[b])});rs.forEach(r=>cont['@'+r]=(cont['@'+r]||0)+1)})}
 const fmt=s=>s?new Date(s).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(',',' ·'):'sem data';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -119,13 +124,16 @@ return '<article class="card'+(novo(n)?'':' velho')+'">'+(novo(n)?'<span class="
 +'<h2 title="'+esc(n.titulo)+'">'+esc(n.titulo)+'</h2>'+(n.lide?'<p'+(n.sem?' class="sem"':'')+' title="'+esc(n.lide)+'">'+esc(n.lide)+'</p>':'')+'<div class="links"><a href="'+esc(n.link)+'" target="_blank" rel="noopener">Ler na fonte →</a>'+(n.gn?'<a class="gn" href="'+esc(n.gn)+'" target="_blank" rel="noopener">via Google News</a>':'')+'</div></article>'}).join('')||'<div class="vazio">Nenhuma notícia para este filtro.</div>';
 $('pg').textContent='Página '+(pag+1)+' de '+tp;$('ant').disabled=pag===0;$('prox').disabled=pag>=tp-1}
 $('lista').addEventListener('toggle',e=>{const d=e.target;if(d.dataset&&d.dataset.r&&!q){d.open?abertos.add(d.dataset.r):abertos.delete(d.dataset.r)}},true);
-$('lista').onclick=e=>{const i=e.target.closest('.item');if(!i)return;sel=i.dataset.b||null;const dr=i.closest('details');if(dr)abertos.add(dr.dataset.r);pag=0;document.body.classList.remove('menu');lista();grade()};
-$('chips').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;tema=tema===c.dataset.t?null:c.dataset.t;pag=0;chips();grade()};
-$('q').oninput=()=>{q=norm($('q').value.trim());lista()};
-$('ant').onclick=()=>{pag--;grade();scrollTo(0,0)};$('prox').onclick=()=>{pag++;grade();scrollTo(0,0)};
+$('lista').onclick=e=>{const i=e.target.closest('.item');if(!i)return;sel=i.dataset.b||null;const dr=i.closest('details');if(dr)abertos.add(dr.dataset.r);pag=0;document.body.classList.remove('menu');lista();grade();empurrar()};
+$('chips').onclick=e=>{const c=e.target.closest('.chip');if(!c)return;tema=tema===c.dataset.t?null:c.dataset.t;pag=0;chips();grade();empurrar()};
+$('q').oninput=()=>{q=norm($('q').value.trim());lista()};$('q').onchange=()=>empurrar();
+$('ant').onclick=()=>{pag--;grade();empurrar();scrollTo(0,0)};$('prox').onclick=()=>{pag++;grade();empurrar();scrollTo(0,0)};
 $('abrir').onclick=e=>{e.stopPropagation();document.body.classList.toggle('menu')};
 document.querySelector('main').addEventListener('click',e=>{if(e.target.id!=='abrir')document.body.classList.remove('menu')});
-contar();lista();chips();grade();
+$('voltar').onclick=()=>{if(history.state&&history.state.prof>0)history.back();else{sel=tema=null;q='';$('q').value='';pag=0;history.replaceState({prof:0},'',location.pathname+location.search);render()}};
+function render(){lista();chips();grade();btnVoltar()}
+addEventListener('popstate',e=>{prof=e.state&&e.state.prof||0;lerHash();render()});
+lerHash();history.replaceState({prof:0},'',location.href);contar();render();
 setInterval(()=>{contar();lista();grade()},5*60e3);
 </script></body></html>`;
 };
