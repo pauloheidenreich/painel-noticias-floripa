@@ -19,14 +19,14 @@ exports.gerarHtml = ({ novidades, noticias, relatorio, geradoEm, total }) => {
   const temas = TEMAS.filter((t) => contTema[t]).sort((a, b) => contTema[b] - contTema[a]);
   const dados = JSON.stringify({ gerado: geradoEm.toISOString(), regioes: REGIOES, rotulos: ROTULOS, temas, noticias: ns }).replace(/</g, '\\u003c');
   const nv = novidades || { novas: [] };
-  const fontes = relatorio.map((r) => `<li class="${h(r.status)}">${h(r.fonte)}: ${r.status === 'ok' ? `${r.floripa} de Florianópolis (de ${r.itens})` : 'falhou – ' + h(r.erro)}</li>`).join('');
+  const fontes = relatorio.map((r) => `<li class="${h(r.status)}">${r.status === 'ok' ? '<i>●</i> ' : '○ '}${h(r.fonte.replace(/ \(via Google News\)$/, ''))}${r.status === 'ok' ? '' : ' (falhou nesta coleta)'}</li>`).join('');
   return `<!doctype html>
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Notícias políticas de Florianópolis por bairro</title>
 <style>
-:root{--Centro:#2563eb;--Norte:#0d9488;--Sul:#d97706;--Leste:#7c3aed;--Continente:#db2777;--Cidade:#334155}
+:root{--Centro:#2563eb;--Norte:#0d9488;--Sul:#d97706;--Leste:#7c3aed;--Continente:#db2777;--Cidade:#334155;--marinho:#0f2a4a}
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:#f3f5f8;color:#1e293b}
-aside{position:fixed;inset:0 auto 0 0;width:260px;background:#fff;border-right:1px solid #e5e7eb;display:flex;flex-direction:column;z-index:10}
+aside{position:sticky;top:64px;height:calc(100vh - 64px);flex:0 0 260px;width:260px;background:#fff;border-right:1px solid #e5e7eb;display:flex;flex-direction:column;z-index:10}
 .busca{padding:16px 14px 10px}.busca input{width:100%;padding:9px 12px;border:1px solid #d6dbe3;border-radius:10px;font:inherit;font-size:14px;background:#f8fafc}
 .lista{flex:1;overflow:auto;padding:0 8px 8px;font-size:14px}
 .item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 10px;border-radius:8px;cursor:pointer}
@@ -40,8 +40,23 @@ summary i{width:9px;height:9px;border-radius:50%}summary span{margin-left:auto;c
 details .item{padding-left:26px}
 .temas{border-top:1px solid #eef0f3;padding:10px 12px 14px}.temas h4{margin:0 0 8px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:#64748b}
 .chips{max-height:120px;overflow:auto;display:flex;flex-wrap:wrap;gap:5px}.chip{font:inherit;font-size:12px;padding:3px 9px;border-radius:999px;border:1px solid #d6dbe3;background:#fff;cursor:pointer;color:#475569}.chip.on{background:#1e293b;color:#fff;border-color:#1e293b}
-main{margin-left:260px;padding:28px 36px;min-height:100vh;display:flex;flex-direction:column}
-header{display:flex;align-items:baseline;gap:14px;margin-bottom:20px}h1{margin:0;font-size:26px}header small{color:#64748b;font-size:13px}
+main{flex:1;min-width:0;padding:28px 36px;min-height:calc(100vh - 64px);display:flex;flex-direction:column}
+
+.topo{position:sticky;top:0;z-index:20;height:64px;background:var(--marinho);color:#fff;display:flex;align-items:center;gap:14px;padding:0 24px;overflow:hidden}
+.topo svg.ponte{position:absolute;right:300px;bottom:0;height:60px;width:420px;opacity:.16;pointer-events:none}
+.marca{flex:1;display:flex;align-items:center;gap:12px;min-width:0;position:relative}.marca b{display:block;font-size:17px;letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.marca small{display:block;font-size:12px;color:#a9bdd6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.selo-ilha{flex:0 0 34px;height:34px;border-radius:9px;background:#f5b841;color:var(--marinho);display:grid;place-items:center;font-weight:800;font-size:15px}
+.marca>div{min-width:0}.cu{display:none}
+.status{margin-left:auto;text-align:right;font-size:12px;color:#cfdbea;line-height:1.4;position:relative;white-space:nowrap}.status strong{color:#fff;font-size:13px}
+.corpo{display:flex;align-items:flex-start}
+.painel-cab{margin-bottom:20px}.cel-status{display:none;font-size:13px;color:#64748b;margin-top:4px}h1{margin:0;font-size:26px}
+.rodape{background:var(--marinho);color:#cfdbea;font-size:13px;line-height:1.55}
+.rodape .cols{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:32px;max-width:1200px;margin:0 auto;padding:36px 32px 24px}
+.rodape h3{margin:0 0 10px;color:#fff;font-size:13px;text-transform:uppercase;letter-spacing:.07em}.rodape p{margin:0 0 8px}.rodape ul{margin:0;padding:0;list-style:none}.rodape li{padding:2px 0}
+.rodape a{color:#f5b841;text-decoration:none}.rodape a:hover{text-decoration:underline}.rodape .falhou{color:#ffb4ab}.rodape .ok i{color:#7dd3a8;font-style:normal}
+.rodape .fim{border-top:1px solid #ffffff1f;text-align:center;padding:14px;font-size:12px;color:#8fa6c2}
+.horas{display:flex;gap:6px;margin-top:6px}.horas span{background:#ffffff14;border-radius:6px;padding:2px 8px;color:#fff}
+
 .grade{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:18px;flex:1;max-height:720px}
 .card{background:#fff;border-radius:14px;box-shadow:0 1px 3px rgba(15,23,42,.06),0 6px 18px rgba(15,23,42,.05);padding:18px;display:flex;flex-direction:column;gap:10px;min-height:0;position:relative}
 .card.velho{opacity:.6}
@@ -53,21 +68,29 @@ header{display:flex;align-items:baseline;gap:14px;margin-bottom:20px}h1{margin:0
 .links{margin-top:auto;display:flex;gap:12px;font-size:13px}.links a{font-weight:600;color:#2563eb;text-decoration:none}.links a.gn{font-weight:400;color:#94a3b8}
 .pag{display:flex;justify-content:center;align-items:center;gap:14px;margin-top:22px}.pag button{font:inherit;font-size:14px;padding:8px 16px;border-radius:10px;border:1px solid #d6dbe3;background:#fff;cursor:pointer}.pag button:disabled{opacity:.4;cursor:default}.pag span{font-size:13px;color:#64748b}
 .vazio{grid-column:1/-1;color:#64748b;text-align:center;padding:60px}
-footer{margin-top:28px;font-size:13px;color:#64748b}footer summary{text-transform:none;letter-spacing:0;font-weight:600;padding-left:0}footer ul{margin:6px 0;padding-left:18px}footer .falhou{color:#b3261e}footer a{color:#2563eb}
 #abrir{display:none}
-@media(max-width:800px){aside{transform:translateX(-100%);transition:.2s;width:280px;visibility:hidden}body.menu aside{transform:none;visibility:visible;box-shadow:0 0 40px rgba(0,0,0,.2)}
-main{margin:0;padding:16px}header{flex-wrap:wrap;gap:6px 12px}h1{font-size:22px;flex-basis:100%}
-#abrir{display:inline-flex;gap:6px;order:-1;font:inherit;font-size:14px;font-weight:600;padding:7px 14px;border-radius:10px;border:1px solid #d6dbe3;background:#fff;color:inherit}
+@media(max-width:800px){.topo{padding:0 12px;gap:10px}.topo svg.ponte{right:-60px;width:300px}.selo-ilha{display:none}.marca b{font-size:15px}.status{display:none}.cel-status{display:block!important}.marca .lg{display:none}.cu{display:inline}
+.rodape .cols{grid-template-columns:1fr;gap:22px;padding:28px 20px 18px}
+aside{position:fixed;top:64px;left:0;height:calc(100vh - 64px);transform:translateX(-100%);transition:.2s;width:280px;visibility:hidden}body.menu aside{transform:none;visibility:visible;box-shadow:0 0 40px rgba(0,0,0,.2)}
+main{padding:16px}h1{font-size:22px}
+#abrir{display:inline-flex;flex:0 0 auto;gap:6px;font:inherit;font-size:13px;font-weight:600;padding:6px 10px;border-radius:9px;border:1px solid #ffffff40;background:#ffffff14;color:#fff;position:relative}
 .grade{grid-template-columns:1fr;grid-template-rows:none;max-height:none}}
 </style></head><body>
-<aside id="menu" aria-label="Bairros"><div class="busca"><input id="q" placeholder="Buscar bairro…" aria-label="Buscar bairro"></div><nav class="lista" id="lista"></nav>
+<header class="topo" role="banner"><button id="abrir" aria-controls="menu">☰ Bairros</button>
+<svg class="ponte" viewBox="0 0 420 60" aria-hidden="true" fill="none" stroke="#fff" stroke-width="2"><path d="M0 52H420"/><path d="M120 52V8M300 52V8" stroke-width="4"/><path d="M0 50Q60 46 120 8Q210 60 300 8Q360 46 420 50"/><path d="M135 22V52M150 32V52M165 40V52M180 45V52M195 48V52M210 49V52M225 48V52M240 45V52M255 40V52M270 32V52M285 22V52M30 47V52M60 44V52M90 33V52M330 33V52M360 44V52M390 47V52" stroke-width="1"/></svg>
+<div class="marca"><span class="selo-ilha" aria-hidden="true">F</span><div><b><span class="lg">Painel de Notícias Políticas — Florianópolis</span><span class="cu">Notícias Políticas · Floripa</span></b><small>Prefeitura, Câmara e políticas públicas por bairro</small></div></div>
+<div class="status"><strong>${total} notícias</strong><br><span class="lg">Atualizado às </span>${h(geradoEm.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' }))} · ${h(geradoEm.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit' }))}</div></header>
+<div class="corpo"><aside id="menu" aria-label="Bairros"><div class="busca"><input id="q" placeholder="Buscar bairro…" aria-label="Buscar bairro"></div><nav class="lista" id="lista"></nav>
 <div class="temas"><h4>Temas</h4><div class="chips" id="chips"></div></div></aside>
-<main><header><button id="abrir" aria-controls="menu">☰ Bairros</button><h1 id="titulo">Toda a cidade</h1><small>Atualizado às ${h(geradoEm.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' }))} de ${h(geradoEm.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' }))} (Brasília)</small></header>
+<main><div class="painel-cab"><h1 id="titulo">Toda a cidade</h1><div class="cel-status">${total} notícias · atualizado às ${h(geradoEm.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' }))} de ${h(geradoEm.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit' }))}</div></div>
 <section class="grade" id="grade" aria-live="polite"></section>
 <nav class="pag"><button id="ant">‹ Anteriores</button><span id="pg"></span><button id="prox">Próximas ›</button></nav>
-<footer><details><summary>Sobre o painel e fontes (${total} notícias · ${nv.novas.length} novas desde a última atualização)</summary>
-<p>Só entram matérias de relevância política (filtro automático por palavras-chave; fontes oficiais entram sempre). Bairro, região e tema são atribuídos automaticamente pelo título e pelo lide e podem conter erros. Cards esmaecidos foram publicados há mais de 24 horas. Dados: <a href="noticias.json">noticias.json</a> · <a href="novidades.json">novidades.json</a></p>
-<ul>${fontes}</ul></details></footer></main>
+</main></div>
+<footer class="rodape"><div class="cols">
+<section><h3>Sobre o painel</h3><p>Notícias de relevância política sobre Florianópolis — Prefeitura, Câmara Municipal, serviços e políticas públicas — coletadas automaticamente e organizadas por bairro e região.</p><p>Bairro, região e tema são atribuídos automaticamente e podem conter erros. ${nv.novas.length} notícias novas nesta atualização.</p></section>
+<section><h3>Fontes monitoradas</h3><ul>${fontes}</ul></section>
+<section><h3>Dados abertos</h3><ul><li><a href="noticias.json">noticias.json</a> — todas as notícias e metadados</li><li><a href="novidades.json">novidades.json</a> — o que mudou desde a última coleta</li></ul><p style="margin-top:12px">Atualização automática diária (horário de Brasília):</p><div class="horas"><span>7h</span><span>12h</span><span>18h</span></div></section>
+</div><div class="fim">© 2026 Paulo Heidenreich</div></footer>
 <script>
 const D=${dados};
 const DIA=864e5;let AGORA=Date.now();
