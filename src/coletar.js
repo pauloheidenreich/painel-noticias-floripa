@@ -4,6 +4,7 @@ const path = require('path');
 const FONTES = require('./fontes');
 const BAIRROS = require('./bairros');
 const { gerarHtml } = require('./html');
+const { decodificar } = require('./entidades');
 const { avaliar } = require('./politica');
 const { carregarAnterior, comparar } = require('./novidades');
 const { motivoDescarte, anoAtoAntigo, outraCidadeNoTexto } = require('./qualidade');
@@ -22,11 +23,7 @@ function decode(s) {
   if (!s) return '';
   s = s.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1');
   s = s.replace(/<[^>]+>/g, ' ');
-  const ent = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ' };
-  s = s.replace(/&(#x?[0-9a-f]+|\w+);/gi, (m, e) => {
-    if (e[0] === '#') return String.fromCodePoint(e[1].toLowerCase() === 'x' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10));
-    return ent[e.toLowerCase()] ?? m;
-  });
+  s = decodificar(s);
   return s.replace(/\s+/g, ' ').trim();
 }
 const tag = (xml, t) => { const m = xml.match(new RegExp('<' + t + '(?:\\s[^>]*)?>([\\s\\S]*?)</' + t + '>', 'i')); return m ? m[1] : ''; };

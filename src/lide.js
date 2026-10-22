@@ -5,10 +5,7 @@ const { resolverGoogleNews } = require('./ementas');
 const UA = 'Mozilla/5.0 (compatible; painel-floripa/0.2; +https://pauloheidenreich.github.io/painel-noticias-floripa/)';
 const MAX = 400;
 
-const ent = (s) => s.replace(/&(#x?[0-9a-f]+|\w+);/gi, (m, e) => {
-  if (e[0] === '#') { try { return String.fromCodePoint(e[1].toLowerCase() === 'x' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10)); } catch { return m; } }
-  return { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', ldquo: '“', rdquo: '”', ndash: '–', mdash: '—', hellip: '…' }[e.toLowerCase()] ?? m;
-});
+const { decodificar: ent } = require('./entidades');
 const limpar = (s) => ent(String(s || '').replace(/<[^>]+>/g, ' ')).replace(/\s+/g, ' ').trim();
 function cortar(s) {
   s = limpar(s); if (s.length <= MAX) return s;
