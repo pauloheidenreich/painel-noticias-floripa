@@ -21,7 +21,7 @@ exports.gerarHtml = ({ novidades, noticias, relatorio, geradoEm, total }) => {
   const nv = novidades || { novas: [] };
   const fontes = relatorio.map((r) => `<li class="${h(r.status)}">${r.status === 'ok' ? '<i>●</i> ' : '○ '}${h(r.fonte.replace(/ \(via Google News\)$/, ''))}${r.status === 'ok' ? '' : ' (falhou nesta coleta)'}</li>`).join('');
   return `<!doctype html>
-<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="pt-BR"><head><meta charset="utf-8"><script defer src="https://cloud.umami.is/script.js" data-website-id="4c4d7199-0432-4d6c-9c9a-b8be9afdc974" data-domains="painel-floripa.com.br"></script><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Notícias políticas de Florianópolis por bairro</title>
 <style>
 :root{--Centro:#2563eb;--Norte:#0d9488;--Sul:#d97706;--Leste:#7c3aed;--Continente:#db2777;--Cidade:#334155;--marinho:#0f2a4a}
@@ -103,8 +103,9 @@ const abertos=new Set();let cont={},sel=null,tema=null,pag=0,q='',prof=0;
 const hashDe=()=>{const p=new URLSearchParams();if(sel)sel[0]==='@'?p.set('regiao',sel.slice(1)):p.set('bairro',sel);if(tema)p.set('tema',tema);if(q)p.set('busca',$('q').value.trim());if(pag)p.set('pag',pag+1);const s=p.toString();return s?'#'+s:location.pathname+location.search};
 const lerHash=()=>{const p=new URLSearchParams(location.hash.slice(1));sel=p.get('regiao')?'@'+p.get('regiao'):p.get('bairro')||null;tema=p.get('tema')||null;const b=p.get('busca')||'';$('q').value=b;q=norm(b);pag=Math.max(0,(+p.get('pag')||1)-1)};
 const inicial=()=>!sel&&!tema&&!q&&!pag;
+let ultF=null;function rastrear(){const k=(sel||'')+'|'+(tema||'');if(ultF===null){ultF=k;return}if(k===ultF)return;ultF=k;try{const d={};if(sel)sel[0]==='@'?d.regiao=sel.slice(1):d.bairro=sel;if(tema)d.tema=tema;window.umami&&umami.track('filtro',d)}catch(e){}}
 function btnVoltar(){$('voltar').disabled=inicial()}
-function empurrar(){const h=hashDe();if(h===(location.hash||location.pathname+location.search))return;prof++;history.pushState({prof},'',h);btnVoltar()}
+function empurrar(){const h=hashDe();if(h===(location.hash||location.pathname+location.search))return;prof++;history.pushState({prof},'',h);btnVoltar();rastrear()}
 function contar(){AGORA=Date.now();cont={};D.noticias.filter(novo).forEach(n=>{const rs=new Set();n.bairros.forEach(b=>{cont[b]=(cont[b]||0)+1;if(regDe[b])rs.add(regDe[b])});rs.forEach(r=>cont['@'+r]=(cont['@'+r]||0)+1)})}
 const fmt=s=>s?new Date(s).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(',',' ·'):'sem data';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -131,7 +132,7 @@ $('ant').onclick=()=>{pag--;grade();empurrar();scrollTo(0,0)};$('prox').onclick=
 $('abrir').onclick=e=>{e.stopPropagation();document.body.classList.toggle('menu')};
 document.querySelector('main').addEventListener('click',e=>{if(e.target.id!=='abrir')document.body.classList.remove('menu')});
 $('voltar').onclick=()=>{if(history.state&&history.state.prof>0)history.back();else{sel=tema=null;q='';$('q').value='';pag=0;history.replaceState({prof:0},'',location.pathname+location.search);render()}};
-function render(){lista();chips();grade();btnVoltar()}
+function render(){lista();chips();grade();btnVoltar();rastrear()}
 addEventListener('popstate',e=>{prof=e.state&&e.state.prof||0;lerHash();render()});
 lerHash();history.replaceState({prof:0},'',location.href);contar();render();
 setInterval(()=>{contar();lista();grade()},5*60e3);
