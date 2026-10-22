@@ -23,7 +23,7 @@ jobs:
       - run: node src/coletar.js
         env:
           CMF_TOKEN: ${{ secrets.CMF_TOKEN }}
-      - run: mkdir -p _site && cp index.html noticias.json novidades.json _site/
+      - run: mkdir -p _site && cp index.html noticias.json novidades.json _site/ && cp static/* _site/
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
