@@ -9,7 +9,9 @@ const fmt = (iso) => iso ? new Date(iso).toLocaleString('pt-BR', { timeZone: 'Am
 const ROTULOS = { 'Norte da Ilha': 'Norte', 'Sul da Ilha': 'Sul', 'Leste da Ilha': 'Leste', 'Continente': 'Continente', 'Centro da Ilha': 'Centro' };
 
 exports.gerarHtml = ({ novidades, noticias, relatorio, geradoEm, total }) => {
+  const ref = (n) => { const d = n.data && /T\d{2}:\d{2}/.test(n.data) ? n.data : (n.entrou_em || n.data); const t = d ? Date.parse(d) : NaN; return Number.isFinite(t) ? t : null; };
   const ns = noticias.map((n) => ({
+    t: ref(n),
     titulo: dec(n.titulo), fonte: dec(n.fonte), data: n.data || null, entrou_em: n.entrou_em || null,
     link: n.link_original || n.link, gn: n.link_original && n.link !== n.link_original ? n.link : null,
     bairros: n.bairros || [], temas: n.temas || [], ano: n.ano_do_ato || null,
@@ -19,6 +21,16 @@ exports.gerarHtml = ({ novidades, noticias, relatorio, geradoEm, total }) => {
   const contTema = {}; for (const n of ns) for (const t of n.temas) contTema[t] = (contTema[t] || 0) + 1;
   const temas = TEMAS.filter((t) => contTema[t]).sort((a, b) => contTema[b] - contTema[a]);
   const dados = JSON.stringify({ gerado: geradoEm.toISOString(), regioes: REGIOES, rotulos: ROTULOS, temas, rotTema: { 'Controle Externo (TCE/MPSC/Justiça)': 'Controle Externo' }, noticias: ns }).replace(/</g, '\\u003c');
+  // Fallback sem JS: contadores das últimas 24h calculados no build (o JS recalcula ao carregar).
+  const agora = geradoEm.getTime(), DIA = 864e5, rec = (n) => n.t != null && agora - n.t < DIA && n.t - agora < DIA;
+  const regDe = {}; for (const [r, bs] of Object.entries(REGIOES)) bs.forEach((b) => (regDe[b] = r)); Object.assign(regDe, ROTULOS);
+  const c24 = {}; let cid = 0; const t24 = {};
+  for (const n of ns.filter(rec)) { cid++; const rs = new Set(); n.bairros.forEach((b) => { c24[b] = (c24[b] || 0) + 1; if (regDe[b]) rs.add(regDe[b]); }); rs.forEach((r) => (c24['@' + r] = (c24['@' + r] || 0) + 1)); n.temas.forEach((t) => (t24[t] = (t24[t] || 0) + 1)); }
+  const lbl = (n) => `${n} ${n === 1 ? 'notícia' : 'notícias'} nas últimas 24 horas`;
+  const cor = (r) => `var(--${r || 'Cidade'})`;
+  const itS = (id, nome, n, r, cls = '') => `<button type="button" class="item ${cls}${n ? '' : ' zero'}" aria-pressed="false" data-b="${h(id)}"><span>${h(nome)}</span><span class="c${n ? '' : ' c0'}" style="background:${cor(r)}" title="${lbl(n)}" aria-label="${lbl(n)}">${n}</span></button>`;
+  const listaS = `<button type="button" class="item cidade ativo" aria-pressed="true" data-b=""><span>Toda a cidade</span><span class="c" style="background:${cor()}" title="${lbl(cid)}" aria-label="${lbl(cid)}">${cid}</span></button>` + Object.entries(REGIOES).map(([r, bs]) => { const tot = c24['@' + r] || 0; return `<details data-r="${h(r)}"><summary><i style="background:${cor(r)}"></i>${h(r)}<span title="${lbl(tot)}" aria-label="${lbl(tot)}">${tot}</span></summary>${itS('@' + r, 'Toda a região', tot, r, 'reg')}${bs.map((b) => itS(b, b, c24[b] || 0, regDe[b])).join('')}</details>`; }).join('');
+  const chipsS = temas.map((x) => `<button type="button" class="chip" aria-pressed="false" data-t="${h(x)}">${h(x === 'Controle Externo (TCE/MPSC/Justiça)' ? 'Controle Externo' : x)}<span class="n" title="${lbl(t24[x] || 0)}" aria-label="${lbl(t24[x] || 0)}">${t24[x] || 0}</span></button>`).join('');
   const nv = novidades || { novas: [] };
   const fontes = relatorio.map((r) => `<li class="${h(r.status)}">${r.status === 'ok' ? '<i>●</i> ' : '○ '}${h(r.fonte.replace(/ \(via Google News\)$/, ''))}${r.status === 'ok' ? '' : ' (falhou nesta coleta)'}</li>`).join('');
   return `<!doctype html>
@@ -81,8 +93,8 @@ main{padding:16px}h1{font-size:22px}
 <svg class="ponte" viewBox="0 0 420 60" aria-hidden="true" fill="none" stroke="#2a4a73" stroke-width="2"><path d="M0 52H420"/><path d="M120 52V8M300 52V8" stroke-width="4"/><path d="M0 50Q60 46 120 8Q210 60 300 8Q360 46 420 50"/><path d="M135 22V52M150 32V52M165 40V52M180 45V52M195 48V52M210 49V52M225 48V52M240 45V52M255 40V52M270 32V52M285 22V52M30 47V52M60 44V52M90 33V52M330 33V52M360 44V52M390 47V52" stroke-width="1"/></svg>
 <div class="marca"><svg class="selo-ilha" viewBox="0 0 64 64" aria-hidden="true" focusable="false"><rect width="64" height="64" rx="14" fill="#0b2545" stroke="#2a4a73" stroke-width="2"/><path d="M8 44 H56" stroke="#f2b632" stroke-width="3.5"/><path d="M20 44 V16 M44 44 V16" stroke="#fff" stroke-width="4"/><path d="M8 40 Q20 14 20 16 Q32 38 44 16 Q44 14 56 40" stroke="#c9d6e8" stroke-width="2.5" fill="none"/><path d="M10 52 Q16 49 22 52 T34 52 T46 52 T56 52" stroke="#c9d6e8" stroke-width="2" fill="none"/></svg><div><b>Painel Floripa</b><small>Prefeitura, Câmara e políticas públicas por bairro</small></div></div>
 <div class="status"><strong>${total} notícias</strong><br><span class="lg">Atualizado às </span>${h(geradoEm.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' }))} · ${h(geradoEm.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit' }))}</div></header>
-<div class="corpo"><aside id="menu" aria-label="Bairros"><div class="busca"><input id="q" placeholder="Buscar bairro…" aria-label="Buscar bairro"></div><p class="legenda">Números = notícias das últimas 24h</p><nav class="lista" id="lista"></nav>
-<div class="temas"><h4>Temas</h4><div class="chips" id="chips"></div></div></aside>
+<div class="corpo"><aside id="menu" aria-label="Bairros"><div class="busca"><input id="q" placeholder="Buscar bairro…" aria-label="Buscar bairro"></div><p class="legenda">Números = notícias das últimas 24h</p><nav class="lista" id="lista">${listaS}</nav>
+<div class="temas"><h4>Temas</h4><div class="chips" id="chips">${chipsS}</div></div></aside>
 <main><div class="painel-cab"><h1 id="titulo" tabindex="-1">Toda a cidade</h1><button type="button" class="limpar" id="limpar" hidden>× limpar</button><div class="cel-status">${total} notícias · atualizado às ${h(geradoEm.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' }))} de ${h(geradoEm.toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo', day: '2-digit', month: '2-digit' }))}</div></div>
 <section class="grade" id="grade"></section><p class="sr-only" id="anuncio" aria-live="polite"></p>
 <nav class="pag" aria-label="Paginação"><button id="voltar" type="button" disabled aria-label="Voltar à visão anterior">← Voltar</button><button id="ant" type="button">‹ Anteriores</button><span id="pg"></span><button id="prox" type="button">Próximas ›</button></nav>
@@ -99,7 +111,7 @@ const DIA=864e5;let AGORA=Date.now();
 const regDe={};for(const[r,bs]of Object.entries(D.regioes))bs.forEach(b=>regDe[b]=r);Object.assign(regDe,D.rotulos);
 const regiaoDe=n=>{for(const b of n.bairros)if(regDe[b])return regDe[b];return null};
 const cor=r=>'var(--'+(r||'Cidade')+')';
-const novo=n=>n.data&&AGORA-new Date(n.data)<DIA;
+const novo=n=>n.t!=null&&AGORA-n.t<DIA&&n.t-AGORA<DIA;
 const $=id=>document.getElementById(id);
 const abertos=new Set();let cont={},hist={},sel=null,tema=null,pag=0,q='',prof=0;
 const hashDe=()=>{const p=new URLSearchParams();if(sel)sel[0]==='@'?p.set('regiao',sel.slice(1)):p.set('bairro',sel);if(tema)p.set('tema',tema);if(q)p.set('busca',$('q').value.trim());if(pag)p.set('pag',pag+1);const s=p.toString();return s?'#'+s:location.pathname+location.search};
@@ -112,13 +124,13 @@ function contar(){AGORA=Date.now();cont={};hist={};D.noticias.forEach(n=>{const 
 const fmt=s=>s?new Date(s).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}).replace(',',' ·'):'sem data';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const norm=s=>s.normalize('NFD').replace(/[\\u0300-\\u036f]/g,'').toLowerCase();
-const lblC=n=>' aria-label="'+n+(n===1?' nova':' novas')+' nas últimas 24h"';
+const lblT=n=>n+(n===1?' notícia':' notícias')+' nas últimas 24 horas';const lblC=n=>' title="'+lblT(n)+'" aria-label="'+lblT(n)+'"';
 const it=(id,nome,n,r,cls='')=>'<button type="button" class="item '+cls+(n||hist[id]?'':' zero')+(sel===id?' ativo':'')+'" aria-pressed="'+(sel===id)+'" data-b="'+esc(id)+'"><span>'+esc(nome)+'</span><span class="c'+(n?'':' c0')+'" style="background:'+cor(r)+'"'+lblC(n)+'>'+n+'</span></button>';
 function lista(){const f=b=>!q||norm(b).includes(q);const nc=D.noticias.filter(novo).length;let h='<button type="button" class="item cidade'+(sel?'':' ativo')+'" aria-pressed="'+!sel+'" data-b=""><span>Toda a cidade</span><span class="c" style="background:'+cor()+'"'+lblC(nc)+'>'+nc+'</span></button>';
 for(const[r,bs]of Object.entries(D.regioes)){const v=bs.filter(f);if(!v.length&&!f(r))continue;const tot=cont['@'+r]||0;const aberto=q||abertos.has(r);
-h+='<details data-r="'+r+'"'+(aberto?' open':'')+'><summary><i style="background:'+cor(r)+'"></i>'+r+'<span>'+tot+'</span></summary>'+it('@'+r,'Toda a região',tot,r,'reg')+v.map(b=>it(b,b,cont[b]||0,regDe[b])).join('')+'</details>'}
+h+='<details data-r="'+r+'"'+(aberto?' open':'')+'><summary><i style="background:'+cor(r)+'"></i>'+r+'<span'+lblC(tot)+'>'+tot+'</span></summary>'+it('@'+r,'Toda a região',tot,r,'reg')+v.map(b=>it(b,b,cont[b]||0,regDe[b])).join('')+'</details>'}
 $('lista').innerHTML=h}
-function chips(){const ct={};D.noticias.filter(casa).forEach(n=>n.temas.forEach(t=>ct[t]=(ct[t]||0)+1));$('chips').innerHTML=D.temas.map(x=>'<button type="button" class="chip'+(tema===x?' on':'')+'" aria-pressed="'+(tema===x)+'"'+(!ct[x]&&tema!==x?' aria-disabled="true"':'')+' data-t="'+esc(x)+'">'+esc(D.rotTema[x]||x)+'<span class="n">'+(ct[x]||0)+'</span></button>').join('')}
+function chips(){const ct={},c2={};D.noticias.filter(casa).forEach(n=>n.temas.forEach(t=>{ct[t]=(ct[t]||0)+1;if(novo(n))c2[t]=(c2[t]||0)+1}));$('chips').innerHTML=D.temas.map(x=>'<button type="button" class="chip'+(tema===x?' on':'')+'" aria-pressed="'+(tema===x)+'"'+(!ct[x]&&tema!==x?' aria-disabled="true"':'')+' data-t="'+esc(x)+'">'+esc(D.rotTema[x]||x)+'<span class="n"'+lblC(c2[x]||0)+'>'+(c2[x]||0)+'</span></button>').join('')}
 const casa=n=>!sel||(sel[0]==='@'?n.bairros.some(b=>regDe[b]===sel.slice(1)):n.bairros.includes(sel));
 function grade(){const ns=D.noticias.filter(n=>casa(n)&&(!tema||n.temas.includes(tema)));
 const tp=Math.max(1,Math.ceil(ns.length/6));pag=Math.max(0,Math.min(pag,tp-1));
