@@ -65,7 +65,7 @@ main{flex:1;min-width:0;padding:28px 36px;min-height:calc(100vh - 64px);display:
 .corpo{display:flex;align-items:flex-start}
 .painel-cab{margin-bottom:20px}.pag #voltar{margin-right:12px}.cel-status{display:none;font-size:13px;color:var(--pf-texto-3);margin-top:4px}h1{margin:0;font-size:1.625rem;font-weight:700;line-height:1.25}
 .rodape{background:var(--marinho);color:var(--pf-ceu);font-size:13px;line-height:1.55}
-.rodape .rp{max-width:1200px;margin:0 auto;padding:22px 32px}.rodape .rp p,.rodape .l1{margin:0 0 6px}.rodape strong{color:#fff}.rodape .fontes-btn{font:inherit;font-weight:600;padding:0;border:0;background:none;color:var(--pf-areia);text-decoration:underline;text-underline-offset:2px;cursor:pointer;border-radius:2px}.rodape .fontes-btn::after{content:" ▾"}.rodape .fontes-btn[aria-expanded=true]::after{content:" ▴"}.rodape #lista-fontes{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:0 20px;margin:6px 0 10px}.rodape #lista-fontes[hidden]{display:none}.rodape .l2{font-size:12px}
+.rodape .rp{max-width:1200px;margin:0 auto;padding:22px 32px}.rodape .rp p,.rodape .l1{margin:0 0 6px}.rodape strong{color:#fff}.rodape #lista-fontes{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:0 20px;margin:6px 0 10px}.rodape .l2{font-size:12px}
 .rodape ul{margin:0;padding:0;list-style:none}.rodape li{padding:2px 0}
 .rodape a{color:var(--pf-areia);text-decoration:none}.rodape a:hover{text-decoration:underline}.rodape .falhou{color:#ffb4ab}.rodape .ok i{color:#7dd3a8;font-style:normal}
 .horas{display:flex;gap:6px;margin-top:6px}.horas span{background:#ffffff14;border-radius:6px;padding:2px 8px;color:#fff}
@@ -100,11 +100,10 @@ main{padding:16px}h1{font-size:22px}
 <nav class="pag" aria-label="Paginação"><button id="voltar" type="button" disabled aria-label="Voltar à visão anterior">← Voltar</button><button id="ant" type="button">‹ Anteriores</button><span id="pg"></span><button id="prox" type="button">Próximas ›</button></nav>
 </main></div>
 <footer class="rodape"><div class="rp">
-<div class="l1"><strong>Painel Floripa</strong> · Notícias de Prefeitura, Câmara e políticas públicas de Florianópolis, coletadas automaticamente de <button type="button" class="fontes-btn" aria-expanded="false" aria-controls="lista-fontes">${relatorio.length} fontes</button>. Bairro, região e tema são atribuídos por automação e podem ter erros.</div>
-<ul id="lista-fontes" hidden>${fontes}</ul>
+<div class="l1"><strong>Painel Floripa</strong> · Notícias de Prefeitura, Câmara e políticas públicas de Florianópolis, coletadas automaticamente de ${relatorio.length} fontes. Bairro, região e tema são atribuídos por automação e podem ter erros.</div>
+<ul id="lista-fontes" aria-label="Fontes">${fontes}</ul>
 <p class="l2">Atualizado às ${h(geradoEm.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' }))} · <a href="noticias.json">Dados abertos (JSON)</a> · © 2026 Paulo Heidenreich</p>
 </div></footer>
-<script>(()=>{const b=document.querySelector(".fontes-btn"),l=document.getElementById("lista-fontes");b.addEventListener("click",()=>{const a=b.getAttribute("aria-expanded")!=="true";b.setAttribute("aria-expanded",a);l.hidden=!a})})()</script>
 <script>
 const D=${dados};
 const DIA=864e5;let AGORA=Date.now();
