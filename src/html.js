@@ -53,10 +53,9 @@ main{flex:1;min-width:0;padding:28px 36px;min-height:calc(100vh - 64px);display:
 .corpo{display:flex;align-items:flex-start}
 .painel-cab{margin-bottom:20px}.pag #voltar{margin-right:12px}.cel-status{display:none;font-size:13px;color:var(--pf-texto-3);margin-top:4px}h1{margin:0;font-size:1.625rem;font-weight:700;line-height:1.25}
 .rodape{background:var(--marinho);color:var(--pf-ceu);font-size:13px;line-height:1.55}
-.rodape .cols{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:32px;max-width:1200px;margin:0 auto;padding:36px 32px 24px}
-.rodape h3{margin:0 0 10px;color:#fff;font-size:13px;text-transform:uppercase;letter-spacing:.07em}.rodape p{margin:0 0 8px}.rodape ul{margin:0;padding:0;list-style:none}.rodape li{padding:2px 0}
+.rodape .rp{max-width:1200px;margin:0 auto;padding:22px 32px}.rodape .rp p,.rodape .l1{margin:0 0 6px}.rodape strong{color:#fff}.rodape .fontes-btn{font:inherit;font-weight:600;padding:0;border:0;background:none;color:var(--pf-areia);text-decoration:underline;text-underline-offset:2px;cursor:pointer;border-radius:2px}.rodape .fontes-btn::after{content:" ▾"}.rodape .fontes-btn[aria-expanded=true]::after{content:" ▴"}.rodape #lista-fontes{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:0 20px;margin:6px 0 10px}.rodape #lista-fontes[hidden]{display:none}.rodape .l2{font-size:12px}
+.rodape ul{margin:0;padding:0;list-style:none}.rodape li{padding:2px 0}
 .rodape a{color:var(--pf-areia);text-decoration:none}.rodape a:hover{text-decoration:underline}.rodape .falhou{color:#ffb4ab}.rodape .ok i{color:#7dd3a8;font-style:normal}
-.rodape .fim{border-top:1px solid #ffffff1f;text-align:center;padding:14px;font-size:12px;color:var(--pf-ceu)}
 .horas{display:flex;gap:6px;margin-top:6px}.horas span{background:#ffffff14;border-radius:6px;padding:2px 8px;color:#fff}
 
 .grade{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr));gap:18px;flex:1;max-height:720px}
@@ -72,7 +71,7 @@ main{flex:1;min-width:0;padding:28px 36px;min-height:calc(100vh - 64px);display:
 .vazio{grid-column:1/-1;color:var(--pf-texto-3);text-align:center;padding:60px}
 #abrir{display:none}
 @media(max-width:800px){.topo{padding:0 12px;gap:10px}.topo svg.ponte{right:-60px;width:300px}.selo-ilha{display:none}.marca b{font-size:15px}.status{display:none}.cel-status{display:block!important}.marca .lg{display:none}.cu{display:inline}
-.rodape .cols{grid-template-columns:1fr;gap:22px;padding:28px 20px 18px}
+.rodape .rp{padding:20px}
 aside{position:fixed;top:64px;left:0;height:calc(100vh - 64px);transform:translateX(-100%);transition:.2s;width:280px;visibility:hidden}body.menu aside{transform:none;visibility:visible;box-shadow:0 0 40px rgba(0,0,0,.2)}
 main{padding:16px}h1{font-size:22px}
 #abrir{display:inline-flex;flex:0 0 auto;gap:6px;font:inherit;font-size:13px;font-weight:600;padding:6px 10px;border-radius:9px;border:1px solid #ffffff40;background:#ffffff14;color:#fff;position:relative}
@@ -88,11 +87,12 @@ main{padding:16px}h1{font-size:22px}
 <section class="grade" id="grade"></section><p class="sr-only" id="anuncio" aria-live="polite"></p>
 <nav class="pag" aria-label="Paginação"><button id="voltar" type="button" disabled aria-label="Voltar à visão anterior">← Voltar</button><button id="ant" type="button">‹ Anteriores</button><span id="pg"></span><button id="prox" type="button">Próximas ›</button></nav>
 </main></div>
-<footer class="rodape"><div class="cols">
-<section><h3>Sobre o painel</h3><p>Notícias de relevância política sobre Florianópolis — Prefeitura, Câmara Municipal, serviços e políticas públicas — coletadas automaticamente e organizadas por bairro e região.</p><p>Bairro, região e tema são atribuídos automaticamente e podem conter erros. ${nv.novas.length} notícias novas nesta atualização.</p></section>
-<section><h3>Fontes monitoradas</h3><ul>${fontes}</ul></section>
-<section><h3>Dados abertos</h3><ul><li><a href="noticias.json">noticias.json</a> — todas as notícias e metadados</li><li><a href="novidades.json">novidades.json</a> — o que mudou desde a última coleta</li></ul><p style="margin-top:12px">Atualização automática a cada 15 minutos.</p></section>
-</div><div class="fim">© 2026 Paulo Heidenreich</div></footer>
+<footer class="rodape"><div class="rp">
+<div class="l1"><strong>Painel Floripa</strong> · Notícias de Prefeitura, Câmara e políticas públicas de Florianópolis, coletadas automaticamente de <button type="button" class="fontes-btn" aria-expanded="false" aria-controls="lista-fontes">${relatorio.length} fontes</button>. Bairro, região e tema são atribuídos por automação e podem ter erros.</div>
+<ul id="lista-fontes" hidden>${fontes}</ul>
+<p class="l2">Atualizado às ${h(geradoEm.toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit' }))} · <a href="noticias.json">Dados abertos (JSON)</a> · © 2026 Paulo Heidenreich</p>
+</div></footer>
+<script>(()=>{const b=document.querySelector(".fontes-btn"),l=document.getElementById("lista-fontes");b.addEventListener("click",()=>{const a=b.getAttribute("aria-expanded")!=="true";b.setAttribute("aria-expanded",a);l.hidden=!a})})()</script>
 <script>
 const D=${dados};
 const DIA=864e5;let AGORA=Date.now();
