@@ -91,7 +91,7 @@ main{padding:16px}h1{font-size:22px}
 <footer class="rodape"><div class="cols">
 <section><h3>Sobre o painel</h3><p>Notícias de relevância política sobre Florianópolis — Prefeitura, Câmara Municipal, serviços e políticas públicas — coletadas automaticamente e organizadas por bairro e região.</p><p>Bairro, região e tema são atribuídos automaticamente e podem conter erros. ${nv.novas.length} notícias novas nesta atualização.</p></section>
 <section><h3>Fontes monitoradas</h3><ul>${fontes}</ul></section>
-<section><h3>Dados abertos</h3><ul><li><a href="noticias.json">noticias.json</a> — todas as notícias e metadados</li><li><a href="novidades.json">novidades.json</a> — o que mudou desde a última coleta</li></ul><p style="margin-top:12px">Atualização automática diária (horário de Brasília):</p><div class="horas"><span>7h</span><span>12h</span><span>18h</span></div></section>
+<section><h3>Dados abertos</h3><ul><li><a href="noticias.json">noticias.json</a> — todas as notícias e metadados</li><li><a href="novidades.json">novidades.json</a> — o que mudou desde a última coleta</li></ul><p style="margin-top:12px">Atualização automática a cada 15 minutos.</p></section>
 </div><div class="fim">© 2026 Paulo Heidenreich</div></footer>
 <script>
 const D=${dados};
