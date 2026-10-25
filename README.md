@@ -42,7 +42,9 @@ No Agendador de Tarefas do Windows, crie uma tarefa que execute a cada hora:
 
 ## Lide, datas, bairro e tema
 - `src/lide.js`: busca o lide da matéria original (og:description, meta description ou 1º parágrafo; até ~400 caracteres), com 8 conexões simultâneas, timeout de 8 s e orçamento total de 100 s (`LIDE_ORCAMENTO_MS`). Sites com captcha/403/429 ficam sem lide (não há contorno). Lides de links já vistos são reaproveitados do `noticias.json` publicado.
-- `data` = publicação; `entrou_em` = primeira vez no painel (herdado da publicação anterior).
+- `data` = publicação; `entrou_em` = primeira vez no painel. Vem da memória `entradas` do `noticias.json` publicado (`src/memoria.js`: link e título normalizados → primeira entrada, mantida por 35 dias), então uma notícia que some de uma coleta e volta mantém a data original e não reaparece como nova.
+- `src/guarda.js`: não publica (sai com erro e o site anterior fica no ar) se um feed que trazia notícias falhou ou se o total caiu abaixo de 70% da publicação anterior. Se a publicação anterior tem mais de 2 h, publica mesmo assim, para não travar o painel. `PAINEL_IGNORAR_GUARDA=1` desliga a guarda.
+- Testes: `npm test`.
 - `src/locais.js`: ruas, rodovias, terminais e equipamentos mapeados para bairro ou região (Norte da Ilha, Sul da Ilha, Leste da Ilha, Continente).
 - `src/temas.js`: etiquetas de tema; o HTML tem filtro por tema.
 - `novidades.json`: `novas` (todas), `novas_recentes` (publicadas há menos de 24 h) e `novas_antigas`.

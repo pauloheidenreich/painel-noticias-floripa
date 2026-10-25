@@ -29,10 +29,11 @@ async function carregarAnterior() {
   finally { clearTimeout(t); }
 }
 
-function comparar(anterior, noticias, agora) {
+// jaVisto (opcional): memória persistente de entradas; item que já passou pelo painel não é "novo"
+function comparar(anterior, noticias, agora, jaVisto = () => false) {
   const links = new Set(), titulos = new Set();
   for (const n of anterior ? anterior.noticias : []) { links.add(normLink(n.link)); titulos.add(normTitulo(n.titulo)); }
-  const eAntiga = (n) => links.has(normLink(n.link)) || titulos.has(normTitulo(n.titulo));
+  const eAntiga = (n) => links.has(normLink(n.link)) || titulos.has(normTitulo(n.titulo)) || jaVisto(n);
   const novas = noticias.filter((n) => !eAntiga(n));
   let removidas = 0;
   if (anterior) {

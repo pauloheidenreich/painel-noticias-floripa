@@ -13,7 +13,9 @@ const { buscarCamara, chaveAto, FONTE: FONTE_CMF } = require('./camara');
 const { preencherLides } = require('./lide');
 const { temas: temasDe } = require('./temas');
 const LOCAIS = require('./locais');
-const { normLink, normTitulo, isoBrasilia } = require('./novidades');
+const { normLink, isoBrasilia } = require('./novidades');
+const { carregarMemoria, entradaDe, jaVisto, atualizarMemoria } = require('./memoria');
+const { verificarColeta } = require('./guarda');
 
 const RAIZ = path.join(__dirname, '..');
 const UA = 'Mozilla/5.0 (painel-floripa prototipo)';
@@ -171,13 +173,11 @@ async function main() {
     console.log(`Câmara (dados abertos): ${cst.chamadas} chamadas em ${cst.tempo_s}s, ${cmf.itens.length} itens recentes, ${cst.adicionados} adicionados, ${cst.duplicados} duplicados, ${cst.descartados} descartados (honrarias/denominações/filtros), ${cst.excedentes || 0} acima do limite, ${cst.ementas_preenchidas} ementas preenchidas${cst.erro ? ' · erro: ' + cst.erro : ''}`);
   } else console.log('Câmara (dados abertos): sem CMF_TOKEN, ignorada');
   console.log(`Descartados por qualidade: ${descartadas.length}`);
-  // cache (lide/link original) e data de entrada herdados da publicação anterior
-  const cache = new Map(); const entradaLink = new Map(); const entradaTit = new Map();
-  for (const a of (anterior && anterior.noticias) || []) {
-    cache.set(normLink(a.link), { lide: a.lide, link_original: a.link_original });
-    const e = a.entrou_em || (anterior.geradoEm ? isoBrasilia(new Date(anterior.geradoEm)) : null);
-    if (e) { entradaLink.set(normLink(a.link), e); entradaTit.set(normTitulo(a.titulo), e); }
-  }
+  // cache (lide/link original) herdado da publicação anterior; data de entrada pela memória persistente
+  const cache = new Map();
+  for (const a of (anterior && anterior.noticias) || []) cache.set(normLink(a.link), { lide: a.lide, link_original: a.link_original });
+  const memoria = carregarMemoria(anterior);
+  console.log(`Memória de entradas: ${memoria.size} chaves` + (anterior && !anterior.entradas ? ' (semeada da publicação anterior)' : ''));
   const t0 = Date.now();
   const lides = await preencherLides(noticias, cache, { concorrencia: 8, timeoutMs: 8000, orcamentoMs: Number(process.env.LIDE_ORCAMENTO_MS) || 100000 }, normLink);
   console.log(`Lides: ${noticias.length - lides.sem}/${noticias.length} (cache ${lides.cache}, página ${lides.ok}, feed ${lides.feed}; bloqueados ${lides.bloqueados}, erros ${lides.erros}, sem tempo ${lides.sem_tempo}) em ${((Date.now() - t0) / 1000).toFixed(1)}s`);
@@ -195,7 +195,7 @@ async function main() {
     const texto = [n.titulo, n.resumo_feed, n.lide, n.resumo].filter(Boolean).join(' . ');
     n.bairros = bairrosDe(texto);
     n.temas = temasDe(texto);
-    n.entrou_em = entradaLink.get(normLink(n.link)) || entradaTit.get(normTitulo(n.titulo)) || agoraIso;
+    n.entrou_em = entradaDe(memoria, n) || agoraIso;
     delete n.resumo_feed; delete n.sem_busca_lide;
   }
   const geralDepois = noticias.filter((n) => !n.bairros.length).length;
@@ -206,13 +206,17 @@ async function main() {
   const grupos = {};
   for (const n of noticias) for (const b of n.bairros.length ? n.bairros : ['Geral/Cidade']) (grupos[b] ||= []).push(n);
   const geradoEm = new Date();
-  const novidades = comparar(anterior, noticias, geradoEm);
+  // guarda: feed falhou ou total caiu demais → não publica (o site anterior continua no ar)
+  const bloqueio = verificarColeta({ relatorio, total: noticias.length, anterior, fontes: FONTES, agora: geradoEm });
+  if (bloqueio) { console.error('Coleta degradada, publicação cancelada: ' + bloqueio); process.exit(1); }
+  const novidades = comparar(anterior, noticias, geradoEm, jaVisto(memoria));
+  const entradas = atualizarMemoria(memoria, noticias, geradoEm);
   const chavesNovas = new Set(novidades.novas.map((n) => n.link));
   for (const n of noticias) n.nova = chavesNovas.has(n.link);
   fs.writeFileSync(path.join(RAIZ, 'novidades.json'), JSON.stringify(novidades, null, 2));
   // histórico simples: acrescenta um resumo por execução (mantém as últimas 200), herdado do publicado
   const historico = ((anterior && anterior.historico) || []).concat([{ atualizado_em: novidades.atualizado_em, total_noticias: novidades.total_noticias, total_novas: novidades.total_novas, removidas_count: novidades.removidas_count }]).slice(-200);
-  fs.writeFileSync(path.join(RAIZ, 'noticias.json'), JSON.stringify({ geradoEm, relatorio, totalFloripa, ementas, qualidade, noticias, rejeitadas, descartadas, historico }, null, 2));
+  fs.writeFileSync(path.join(RAIZ, 'noticias.json'), JSON.stringify({ geradoEm, relatorio, totalFloripa, ementas, qualidade, noticias, rejeitadas, descartadas, historico, entradas }, null, 2));
   fs.writeFileSync(path.join(RAIZ, 'index.html'), gerarHtml({ novidades, noticias, grupos, relatorio, geradoEm, total: noticias.length, bairros: BAIRROS.map((b) => b.nome) }));
   console.log(`\n${totalFloripa} itens de Florianópolis (antes da dedup.), ${rejeitadas.length} rejeitados pelo filtro político; ${noticias.length} notícias políticas. Por bairro:`);
   for (const [b, l] of Object.entries(grupos).sort((a, b) => b[1].length - a[1].length)) console.log(`  ${b}: ${l.length}`);
