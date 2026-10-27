@@ -1,6 +1,10 @@
 'use strict';
 // Compara a coleta atual com o noticias.json publicado anteriormente.
-const URL_ANTERIOR = process.env.PAINEL_ANTERIOR_URL || 'https://pauloheidenreich.github.io/painel-noticias-floripa/noticias.json';
+// Fontes da publicação anterior, em ordem: domínio próprio (sem o 301 do github.io) e o endereço github.io.
+// PAINEL_ANTERIOR_URL aceita uma ou mais URLs separadas por vírgula.
+const URLS_ANTERIOR = (process.env.PAINEL_ANTERIOR_URL || 'https://painel-floripa.com.br/noticias.json,https://pauloheidenreich.github.io/painel-noticias-floripa/noticias.json')
+  .split(',').map((u) => u.trim()).filter(Boolean);
+const URL_ANTERIOR = URLS_ANTERIOR[0];
 
 const normLink = (u) => {
   try {
@@ -17,16 +21,30 @@ function isoBrasilia(d = new Date()) {
   return l.toISOString().replace(/\.\d{3}Z$/, '-03:00');
 }
 
-async function carregarAnterior() {
-  const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), 20000);
-  try {
-    const r = await fetch(URL_ANTERIOR + '?t=' + Date.now(), { signal: ctrl.signal, headers: { 'Cache-Control': 'no-cache' } });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const j = await r.json();
-    if (!Array.isArray(j.noticias)) throw new Error('formato inesperado');
-    return j;
-  } catch (e) { console.log('[AVISO] noticias.json anterior indisponível (' + (e.message || e) + '): tudo será tratado como novo.'); return null; }
-  finally { clearTimeout(t); }
+// Baixa a publicação anterior com novas tentativas (HTTP 5xx/timeout do Pages são passageiros).
+// Retorna { anterior, erro }: anterior = null e erro preenchido se nenhuma URL respondeu em nenhuma tentativa.
+// Quem chama decide o que fazer; o coletor NÃO publica sem a anterior (ver verificarAnterior em guarda.js).
+async function carregarAnterior({ urls = URLS_ANTERIOR, tentativas = 3, esperaMs = 5000, timeoutMs = 20000, fetchImpl = fetch, log = console.log } = {}) {
+  const erros = [];
+  for (let i = 1; i <= tentativas; i++) {
+    for (const url of urls) {
+      const ctrl = new AbortController(); const t = setTimeout(() => ctrl.abort(), timeoutMs);
+      try {
+        const r = await fetchImpl(url + '?t=' + Date.now(), { signal: ctrl.signal, headers: { 'Cache-Control': 'no-cache' }, redirect: 'follow' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const j = await r.json();
+        if (!j || !Array.isArray(j.noticias)) throw new Error('formato inesperado');
+        if (erros.length) log(`noticias.json anterior obtido de ${url} na tentativa ${i} (antes: ${erros.join('; ')})`);
+        return { anterior: j, erro: null };
+      } catch (e) {
+        erros.push(`${url} #${i}: ${e.name === 'AbortError' ? 'timeout' : (e.message || e)}`);
+      } finally { clearTimeout(t); }
+    }
+    if (i < tentativas && esperaMs > 0) await new Promise((res) => setTimeout(res, esperaMs * i));
+  }
+  const erro = erros.join('; ');
+  log('[AVISO] noticias.json anterior indisponível: ' + erro);
+  return { anterior: null, erro };
 }
 
 // jaVisto (opcional): memória persistente de entradas; item que já passou pelo painel não é "novo"
@@ -69,4 +87,4 @@ function item(n) {
     lide: n.lide || null, ...(n.resumo ? { resumo: n.resumo } : {}), ...(n.sem_ementa ? { sem_ementa: true } : {}),
   };
 }
-module.exports = { carregarAnterior, comparar, normLink, normTitulo, isoBrasilia, URL_ANTERIOR };
+module.exports = { carregarAnterior, comparar, normLink, normTitulo, isoBrasilia, URL_ANTERIOR, URLS_ANTERIOR };

@@ -25,6 +25,12 @@ function carregarMemoria(anterior) {
   return mem;
 }
 
+// Mescla um mapa extra { chave: entrou_em } (ex.: entradas-restauradas.json); prevalece a data mais antiga.
+function mesclarEntradas(mem, extra) {
+  if (extra && typeof extra === 'object') for (const [k, v] of Object.entries(extra)) anotar(mem, k, v);
+  return mem;
+}
+
 const entradaDe = (mem, n) => { const [l, t] = chaves(n); return mem.get(l) || mem.get(t) || null; };
 const jaVisto = (mem) => (n) => entradaDe(mem, n) != null;
 
@@ -39,4 +45,4 @@ function atualizarMemoria(mem, noticias, agora = new Date()) {
   return out;
 }
 
-module.exports = { DIAS_MEMORIA, carregarMemoria, entradaDe, jaVisto, atualizarMemoria };
+module.exports = { DIAS_MEMORIA, carregarMemoria, mesclarEntradas, entradaDe, jaVisto, atualizarMemoria };

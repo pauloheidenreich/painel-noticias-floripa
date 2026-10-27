@@ -14,8 +14,8 @@ const { preencherLides } = require('./lide');
 const { temas: temasDe } = require('./temas');
 const LOCAIS = require('./locais');
 const { normLink, isoBrasilia } = require('./novidades');
-const { carregarMemoria, entradaDe, jaVisto, atualizarMemoria } = require('./memoria');
-const { verificarColeta } = require('./guarda');
+const { carregarMemoria, mesclarEntradas, entradaDe, jaVisto, atualizarMemoria } = require('./memoria');
+const { verificarColeta, verificarAnterior } = require('./guarda');
 
 const RAIZ = path.join(__dirname, '..');
 const UA = 'Mozilla/5.0 (painel-floripa prototipo)';
@@ -100,7 +100,10 @@ function bairrosDe(texto) {
 async function main() {
   // dados abertos da Câmara (só com CMF_TOKEN): roda em paralelo com os feeds; nunca derruba a coleta
   const pCamara = buscarCamara({ log: console.log }).catch((e) => ({ itens: [], st: { ativo: true, erro: 'falha inesperada' } }));
-  const anterior = await carregarAnterior();
+  const carga = await carregarAnterior();
+  const semAnterior = verificarAnterior(carga);
+  if (semAnterior) { console.error('Publicação cancelada: ' + semAnterior); process.exit(1); }
+  const anterior = carga.anterior;
   const relatorio = [];
   const todas = new Map();
   const rejeitadas = []; const descartadas = []; let totalFloripa = 0;
@@ -177,6 +180,9 @@ async function main() {
   const cache = new Map();
   for (const a of (anterior && anterior.noticias) || []) cache.set(normLink(a.link), { lide: a.lide, link_original: a.link_original });
   const memoria = carregarMemoria(anterior);
+  // restauração pontual (ex.: datas perdidas em 26/10/2026): absorvida em `entradas` na próxima publicação; depois pode ser apagada
+  const arqRestauro = path.join(RAIZ, 'entradas-restauradas.json');
+  if (fs.existsSync(arqRestauro)) { const r = JSON.parse(fs.readFileSync(arqRestauro, 'utf8')); mesclarEntradas(memoria, r.entradas || r); console.log(`Entradas restauradas mescladas: ${Object.keys(r.entradas || r).length} chaves`); }
   console.log(`Memória de entradas: ${memoria.size} chaves` + (anterior && !anterior.entradas ? ' (semeada da publicação anterior)' : ''));
   const t0 = Date.now();
   const lides = await preencherLides(noticias, cache, { concorrencia: 8, timeoutMs: 8000, orcamentoMs: Number(process.env.LIDE_ORCAMENTO_MS) || 100000 }, normLink);

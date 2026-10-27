@@ -9,6 +9,15 @@
 const MIN_PROPORCAO = 0.7;
 const MAX_ATRASO_MIN = 120;
 
+// Sem a publicação anterior não há memória de entradas: publicar assim recarimba tudo como "novo"
+// (incidente de 26/10/2026 19:00 UTC, HTTP 503 do Pages). Por isso, se a anterior não carregou, não publica.
+// Primeira publicação de verdade (ou recuperação manual): PAINEL_PRIMEIRA_EXECUCAO=1.
+function verificarAnterior({ anterior, erro }, env = process.env) {
+  if (anterior) return null;
+  if (env.PAINEL_PRIMEIRA_EXECUCAO === '1') return null;
+  return 'noticias.json anterior indisponível (' + (erro || 'motivo desconhecido') + '); sem ele a memória de entradas seria perdida. Para a primeira publicação use PAINEL_PRIMEIRA_EXECUCAO=1';
+}
+
 function verificarColeta({ relatorio, total, anterior, fontes, agora = new Date(), env = process.env }) {
   if (env.PAINEL_IGNORAR_GUARDA === '1') return null;
   if (!anterior) return null;
@@ -27,4 +36,4 @@ function verificarColeta({ relatorio, total, anterior, fontes, agora = new Date(
   return motivos.length ? motivos.join(' · ') : null;
 }
 
-module.exports = { verificarColeta, MIN_PROPORCAO, MAX_ATRASO_MIN };
+module.exports = { verificarAnterior, verificarColeta, MIN_PROPORCAO, MAX_ATRASO_MIN };

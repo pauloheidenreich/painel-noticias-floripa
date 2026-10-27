@@ -47,3 +47,13 @@ test('poda chaves com mais de 35 dias, exceto as dos itens atuais', () => {
   assert.strictEqual(out['l:velha2'], '2026-09-01T10:00:00-03:00');
   assert.strictEqual(out['t:atual antiga'], '2026-09-01T10:00:00-03:00');
 });
+
+test('mesclarEntradas restaura a data mais antiga sem atrasar as mais antigas já conhecidas', () => {
+  const { mesclarEntradas, entradaDe: ent } = require('../src/memoria');
+  const m = new Map([['l:x/a', '2026-10-26T16:02:07-03:00'], ['l:x/b', '2026-10-20T10:00:00-03:00']]);
+  mesclarEntradas(m, { 'l:x/a': '2026-10-24T09:00:00-03:00', 'l:x/b': '2026-10-26T16:02:07-03:00', 'l:x/c': 'lixo' });
+  assert.strictEqual(m.get('l:x/a'), '2026-10-24T09:00:00-03:00');
+  assert.strictEqual(m.get('l:x/b'), '2026-10-20T10:00:00-03:00');
+  assert.strictEqual(m.has('l:x/c'), false);
+  assert.strictEqual(ent(m, { link: 'https://x/a', titulo: 'zzz' }), '2026-10-24T09:00:00-03:00');
+});
